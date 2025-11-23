@@ -13,7 +13,7 @@ class CartItem(Base):
     variant_id = Column(Integer, ForeignKey("product_variants.id", ondelete="SET NULL"), nullable=True)
     quantity = Column(Integer, nullable=False, default=1)
     unit_price_cents = Column(Integer, nullable=False)  # Price snapshot at time of adding to cart
-    metadata = Column(JSON, nullable=True)  # Product options/customizations
+    item_metadata = Column(JSON, nullable=True)  # Product options/customizations
     added_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
     # Relationships

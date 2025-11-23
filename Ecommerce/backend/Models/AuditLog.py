@@ -28,7 +28,7 @@ class AuditLog(Base):
     target_id = Column(String(100), nullable=False, index=True)  # ID of the affected resource
     
     # Additional context
-    metadata = Column(JSON, nullable=True)  # Structured data: before/after values, IP address, user agent
+    item_metadata = Column(JSON, nullable=True)  # Structured data: before/after values, IP address, user agent
     
     # Request context
     ip_address = Column(String(45), nullable=True)  # IPv4 or IPv6
