@@ -1,15 +1,38 @@
-# Represents a record of important system actions for security, compliance, and debugging.
-# Tracks who did what, when, and from where - essential for security audits and troubleshooting.
+from typing import Any
+
 class AuditLog:
-    def __init__(self, id, actor_id, actor_type, actor_email, action, target_type, target_id, metadata, ip_address, user_agent, created_at):
-        self.id = id  # Unique audit log entry identifier
-        self.actor_id = actor_id  # ID of who performed the action (user, admin, API key)
-        self.actor_type = actor_type  # Type of actor: "user", "admin", "system", "api_key"
-        self.actor_email = actor_email  # Email of the actor for easy identification in logs
-        self.action = action  # What was done (e.g., "user.login", "order.created", "product.updated", "payment.refunded")
-        self.target_type = target_type  # Type of resource affected (e.g., "Product", "Order", "User")
-        self.target_id = target_id  # ID of the specific resource affected
-        self.metadata = metadata  # JSON with additional context (e.g., what fields changed, old vs new values)
-        self.ip_address = ip_address  # IP address the action originated from (for security tracking)
-        self.user_agent = user_agent  # Browser/app that made the request (helps identify suspicious activity)
-        self.created_at = created_at  # When the action occurred
+    def __init__(self, id, actor_id, actor_type, actor_email, action, target_type, target_id, item_metadata, ip_address, user_agent, created_at):
+        self.id = id
+        self.actor_id = actor_id
+        self.actor_type = actor_type
+        self.actor_email = actor_email
+        self.action = action
+        self.target_type = target_type
+        self.target_id = target_id
+        self.item_metadata = item_metadata
+        self.ip_address = ip_address
+        self.user_agent = user_agent
+        self.created_at = created_at
+    
+    def to_dict(self, include_sensitive: bool = False) -> dict[str, Any]:
+        result = {
+            "id": self.id,
+            "actor_id": self.actor_id,
+            "actor_type": self.actor_type,
+            "action": self.action,
+            "target_type": self.target_type,
+            "target_id": self.target_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+        
+        if include_sensitive:
+            result["actor_email"] = self.actor_email
+            result["ip_address"] = self.ip_address
+            result["user_agent"] = self.user_agent
+            result["metadata"] = self.item_metadata
+        else:
+            if self.item_metadata:
+                sanitized = {k: v for k, v in self.item_metadata.items() if k not in ['password', 'token', 'key', 'secret']}
+                result["metadata"] = sanitized
+        
+        return result

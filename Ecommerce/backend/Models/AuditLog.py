@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, CheckConstraint
 from sqlalchemy.sql import func
 from database import Base
 
@@ -12,32 +12,25 @@ class AuditLog(Base):
     """
     __tablename__ = "audit_logs"
     
-    # Primary key
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    
-    # Who performed the action
-    actor_id = Column(Integer, nullable=True, index=True)  # User ID (NULL for system actions)
-    actor_type = Column(String(50), nullable=False)  # "user", "api_key", "system"
-    actor_email = Column(String(255), nullable=True)  # Snapshot of email at time of action
-    
-    # What action was performed
-    action = Column(String(100), nullable=False, index=True)  # "order.created", "product.updated", "user.deleted"
-    
-    # What resource was affected
-    target_type = Column(String(50), nullable=False, index=True)  # "Order", "Product", "User"
-    target_id = Column(String(100), nullable=False, index=True)  # ID of the affected resource
-    
-    # Additional context
-    item_metadata = Column(JSON, nullable=True)  # Structured data: before/after values, IP address, user agent
-    
-    # Request context
-    ip_address = Column(String(45), nullable=True)  # IPv4 or IPv6
+    actor_id = Column(Integer, nullable=True, index=True)
+    actor_type = Column(String(50), nullable=False)
+    actor_email = Column(String(255), nullable=True)
+    action = Column(String(100), nullable=False, index=True)
+    target_type = Column(String(50), nullable=False, index=True)
+    target_id = Column(String(100), nullable=False, index=True)
+    item_metadata = Column(JSON, nullable=True)
+    ip_address = Column(String(45), nullable=True)
     user_agent = Column(Text, nullable=True)
-    
-    # Timestamp (immutable)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    
+    __table_args__ = (
+        CheckConstraint("actor_type IN ('user', 'api_key', 'system', 'admin')", name='check_actor_type_valid'),
+        CheckConstraint("length(trim(action)) > 0", name='check_action_present'),
+        CheckConstraint("length(trim(target_type)) > 0", name='check_target_type_present'),
+        CheckConstraint("length(trim(target_id)) > 0", name='check_target_id_present'),
+        CheckConstraint("length(ip_address) <= 45", name='check_ip_length'),
+    )
     
     def __repr__(self):
         return f"<AuditLog(id={self.id}, action={self.action}, actor_id={self.actor_id}, target={self.target_type}:{self.target_id})>"
-    
-    # Note: to_dict() method will be in a service/serializer

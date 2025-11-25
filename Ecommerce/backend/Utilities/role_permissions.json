@@ -1,0 +1,243 @@
+{
+  "user_roles": {
+    "admin": {
+      "description": "Platform administrators with full system access",
+      "actor_type": "human",
+      "permissions": {
+        "users": ["read", "write", "delete", "impersonate"],
+        "products": ["read", "write", "delete", "publish"],
+        "categories": ["read", "write", "delete"],
+        "orders": ["read", "write", "cancel", "refund"],
+        "payments": ["read", "write", "refund", "void"],
+        "inventory": ["read", "write", "adjust", "reconcile"],
+        "shipments": ["read", "write", "create_label", "cancel"],
+        "returns": ["read", "write", "approve", "reject"],
+        "refunds": ["read", "write", "approve"],
+        "reviews": ["read", "write", "approve", "reject", "delete"],
+        "coupons": ["read", "write", "delete"],
+        "carts": ["read", "write", "clear"],
+        "wishlists": ["read", "write", "clear"],
+        "addresses": ["read", "write", "delete"],
+        "api_keys": ["read", "write", "revoke"],
+        "audit_logs": ["read"],
+        "jobs": ["read", "write", "retry", "cancel"],
+        "product_feeds": ["read", "write", "import", "export"],
+        "blobs": ["read", "write", "delete"],
+        "sessions": ["read", "write", "terminate"],
+        "reports": ["read", "generate", "export"],
+        "analytics": ["read", "track"],
+        "webhooks": ["read", "write", "delete", "test"]
+      }
+    },
+    "support": {
+      "description": "Customer service representatives handling support requests",
+      "actor_type": "human",
+      "permissions": {
+        "users": ["read"],
+        "products": ["read"],
+        "categories": ["read"],
+        "orders": ["read", "write", "cancel"],
+        "payments": ["read"],
+        "inventory": ["read"],
+        "shipments": ["read", "write"],
+        "returns": ["read", "write", "approve", "reject"],
+        "refunds": ["read", "write"],
+        "reviews": ["read", "approve", "reject"],
+        "coupons": ["read"],
+        "carts": ["read"],
+        "wishlists": ["read"],
+        "addresses": ["read"],
+        "audit_logs": ["read"],
+        "jobs": ["read"],
+        "blobs": ["read"]
+      }
+    },
+    "customer": {
+      "description": "Registered users who can shop and manage their account",
+      "actor_type": "human",
+      "permissions": {
+        "users": ["read:own", "write:own"],
+        "products": ["read"],
+        "categories": ["read"],
+        "orders": ["read:own", "write:own"],
+        "payments": ["read:own"],
+        "shipments": ["read:own"],
+        "returns": ["read:own", "write:own"],
+        "reviews": ["read", "write:own", "delete:own"],
+        "carts": ["read:own", "write:own"],
+        "wishlists": ["read:own", "write:own"],
+        "addresses": ["read:own", "write:own", "delete:own"]
+      }
+    }
+  },
+  "resources": {
+    "user": {
+      "actions": ["read", "write", "delete"],
+      "description": "User identity and profile management"
+    },
+    "product": {
+      "actions": ["read", "write", "delete"],
+      "description": "Product catalog and variants"
+    },
+    "category": {
+      "actions": ["read", "write", "delete"],
+      "description": "Product categorization and hierarchy"
+    },
+    "order": {
+      "actions": ["read", "write", "cancel", "refund"],
+      "description": "Order lifecycle and management"
+    },
+    "payment": {
+      "actions": ["read", "write", "refund"],
+      "description": "Payment processing and transactions"
+    },
+    "inventory": {
+      "actions": ["read", "write", "adjust"],
+      "description": "Stock levels and inventory transactions"
+    },
+    "shipment": {
+      "actions": ["read", "write", "create_label"],
+      "description": "Fulfillment and carrier logistics"
+    },
+    "return": {
+      "actions": ["read", "write", "approve"],
+      "description": "Return request processing"
+    },
+    "refund": {
+      "actions": ["read", "write"],
+      "description": "Financial refund operations"
+    },
+    "review": {
+      "actions": ["read", "write", "approve", "delete"],
+      "description": "Customer product reviews"
+    },
+    "coupon": {
+      "actions": ["read", "write", "delete"],
+      "description": "Promotional codes and discounts"
+    },
+    "cart": {
+      "actions": ["read", "write"],
+      "description": "Shopping cart management"
+    },
+    "wishlist": {
+      "actions": ["read", "write"],
+      "description": "Saved items for later"
+    },
+    "address": {
+      "actions": ["read", "write", "delete"],
+      "description": "Shipping and billing addresses"
+    },
+    "apikey": {
+      "actions": ["read", "write", "revoke"],
+      "description": "API access credentials"
+    },
+    "auditlog": {
+      "actions": ["read"],
+      "description": "Security and operational audit trail"
+    },
+    "job": {
+      "actions": ["read", "write", "retry"],
+      "description": "Background job management"
+    },
+    "productfeed": {
+      "actions": ["read", "write", "import"],
+      "description": "Bulk catalog import/export"
+    },
+    "blob": {
+      "actions": ["read", "write", "delete"],
+      "description": "Binary asset storage"
+    },
+    "session": {
+      "actions": ["read", "write"],
+      "description": "User session management"
+    },
+    "reports": {
+      "actions": ["read", "generate"],
+      "description": "Business analytics reports"
+    },
+    "analytics": {
+      "actions": ["read"],
+      "description": "Event tracking and metrics"
+    },
+    "webhook": {
+      "actions": ["read", "write", "delete"],
+      "description": "Outbound event webhooks"
+    }
+  },
+  "guest_permissions": {
+    "description": "Permissions for unauthenticated visitors (session-based)",
+    "actor_type": "anonymous",
+    "permissions": {
+      "products": ["read"],
+      "categories": ["read"],
+      "reviews": ["read"],
+      "carts": ["read:session", "write:session"],
+      "orders": ["write:guest_checkout"]
+    }
+  },
+  "ownership_scopes": {
+    ":own": {
+      "description": "User can only access resources they own",
+      "validation": "resource.user_id == current_user.id"
+    },
+    ":session": {
+      "description": "Guest can only access resources tied to their session token",
+      "validation": "resource.session_id == current_session.id"
+    },
+    ":guest_checkout": {
+      "description": "Anonymous users can create orders without authentication",
+      "validation": "Allow order creation with session or email"
+    }
+  },
+  "authorization_rules": {
+    "description": "Implementation logic for AuthService.authorize(user, action, resource, resource_id)",
+    "pre_checks": [
+      "Verify user.is_active == True before any privileged operation",
+      "Check user.email_verified for sensitive operations (admin actions, high-value orders)",
+      "Verify user is not locked (user.locked_until is None or expired)"
+    ],
+    "evaluation_order": [
+      "1. Check if user is admin → grant all permissions",
+      "2. Check if action exists in user's role permissions for the resource",
+      "3. If permission has :own scope, verify resource ownership",
+      "4. If permission has :session scope, verify session ownership",
+      "5. Return True if all checks pass, False otherwise"
+    ],
+    "examples": {
+      "admin_access": {
+        "user_role": "admin",
+        "action": "delete",
+        "resource": "products",
+        "result": "Granted (admin has all permissions)"
+      },
+      "customer_own_order": {
+        "user_role": "customer",
+        "action": "read:own",
+        "resource": "orders",
+        "resource_id": "order_123",
+        "validation": "order_123.user_id == current_user.id",
+        "result": "Granted if ownership matches"
+      },
+      "customer_other_order": {
+        "user_role": "customer",
+        "action": "read",
+        "resource": "orders",
+        "resource_id": "order_456",
+        "result": "Denied (customer can only read:own orders)"
+      },
+      "support_cancel_order": {
+        "user_role": "support",
+        "action": "cancel",
+        "resource": "orders",
+        "result": "Granted (support has cancel permission)"
+      },
+      "guest_add_to_cart": {
+        "user_role": "guest",
+        "action": "write:session",
+        "resource": "carts",
+        "validation": "cart.session_id == current_session.id",
+        "result": "Granted if session matches"
+      }
+    }
+  }
+}
