@@ -63,6 +63,7 @@ class ProductVariant:
         available = self.stock_quantity
         
         if self._reservations_cache is not None:
+            #reservation cache to keep tabs if multi users doing same action.
             available -= self._reservations_cache
         elif repository:
             try:

@@ -115,7 +115,7 @@ class Shipment:
         if repository:
             repository.update(self)
     
-    def to_dict(self, blob_service=None) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "id": self.id,
             "order_id": self.order_id,
@@ -132,12 +132,7 @@ class Shipment:
             "updated_at": self.updated_at.isoformat() if self.updated_at else None
         }
         
-        if self.label_blob_id and blob_service:
-            try:
-                blob = blob_service.get_by_id(self.label_blob_id)
-                if blob:
-                    result["label_url"] = blob.get_signed_url(ttl_seconds=3600)
-            except:
-                result["label_url"] = None
+        if self.label_blob_id:
+            result["label_url"] = f"/api/blobs/{self.label_blob_id}/download"
         
         return result
