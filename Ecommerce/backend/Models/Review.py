@@ -13,6 +13,71 @@ class ReviewStatus(str, enum.Enum):
 
 
 class Review(Base):
+    """
+    SQLAlchemy ORM model for reviews table.
+    
+    User-generated product reviews with moderation workflow, verified purchase badges,
+    and automated toxicity detection. Supports star ratings, titles, and detailed comments.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Foreign Keys: product_id -> products.id (CASCADE), user_id -> users.id (CASCADE),
+                       order_id -> orders.id (SET NULL)
+        - Indexes: id (primary), product_id, user_id, order_id, is_verified_purchase,
+                   status, created_at
+        
+    Data Integrity:
+        - Rating must be 1-5 stars (inclusive)
+        - Toxicity score (if present) must be 0-100
+        - Approval timestamp must be after creation
+        - Rejection timestamp must be after creation
+        - Updated timestamp must be after creation
+        
+    Relationships:
+        - Many-to-one with Product (product has many reviews)
+        - Many-to-one with User (user can write many reviews)
+        - Many-to-one with Order (optional, for verified purchases)
+        
+    Moderation Workflow:
+        1. PENDING: Review submitted, awaiting moderation
+        2. APPROVED: Passes moderation, displayed publicly
+        3. REJECTED: Violates guidelines, not displayed
+        4. FLAGGED: Reported by users, needs admin review
+        
+    Verified Purchase:
+        - is_verified_purchase: True if order_id exists and user purchased product
+        - Adds credibility badge to review
+        - Prevents fake reviews from non-customers
+        
+    Content Safety:
+        - toxicity_score: 0-100 from ML toxicity detection API
+        - High scores auto-flag for moderation
+        - Thresholds: <30 (clean), 30-70 (review), >70 (auto-reject)
+        
+    Design Notes:
+        - title: Optional short headline (e.g., "Great product!")
+        - comment: Detailed review text
+        - moderation_notes: Internal notes from moderation team
+        - Rating required, title/comment optional
+        - Order link enables purchase verification
+        
+    Display Logic:
+        - Public: status = APPROVED
+        - Verified badge: is_verified_purchase = true
+        - Average rating: AVG(rating) WHERE status = APPROVED
+        - Sort by: created_at DESC (newest first)
+        
+    Anti-Spam:
+        - One review per user per product (application-level enforcement)
+        - Verified purchases prioritized in sorting
+        - Toxicity detection prevents abuse
+        
+    Analytics:
+        - Average rating per product
+        - Review count per product
+        - Verification rate: COUNT(is_verified_purchase=true) / COUNT(*)
+        - Moderation metrics: Approval/rejection rates
+    """
     __tablename__ = "reviews"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

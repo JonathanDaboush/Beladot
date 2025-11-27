@@ -24,6 +24,88 @@ class ItemCondition(str, enum.Enum):
 
 
 class Return(Base):
+    """
+    SQLAlchemy ORM model for returns table.
+    
+    Manages customer return requests with approval workflow, shipment tracking,
+    inspection process, and refund integration. Supports partial returns with
+    item-level tracking and photo evidence.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Foreign Key: order_id -> orders.id (CASCADE)
+        - Indexes: id (primary), order_id, status, requested_at
+        
+    Data Integrity:
+        - Reason cannot be empty
+        - Cascading delete when order deleted
+        - Timestamps track workflow progression
+        
+    Relationships:
+        - Many-to-one with Order (order can have multiple return requests)
+        - One-to-one with Refund (return may trigger refund)
+        
+    Return Status Lifecycle:
+        1. REQUESTED: Customer initiates return
+        2. APPROVED: Admin approves, provides return label
+        3. REJECTED: Return denied (outside window, damaged, etc.)
+        4. SHIPPED_BACK: Customer ships items back
+        5. RECEIVED: Warehouse receives package
+        6. INSPECTED: Items inspected for condition
+        7. COMPLETED: Return processed, refund initiated
+        
+    Item Conditions:
+        - NEW: Unopened, original packaging
+        - LIKE_NEW: Opened but unused, pristine condition
+        - GOOD: Used but functional, minor wear
+        - DAMAGED: Broken/defective (customer damaged)
+        - DEFECTIVE: Manufacturing defect
+        
+    Return Items:
+        - return_items: JSON array of {order_item_id, quantity, reason}
+        - Supports partial returns (not all items)
+        - Example: [{"order_item_id": 123, "quantity": 2, "reason": "Wrong size"}]
+        
+    Photo Evidence:
+        - photos: JSON array of blob_ids or URLs
+        - Required for damage/defect claims
+        - Attached during return request or inspection
+        
+    Design Notes:
+        - reason: Customer explanation (size, quality, damaged, etc.)
+        - item_condition: Assessed during inspection phase
+        - inspection_notes: Warehouse notes on item condition
+        - admin_notes: Internal notes for customer service
+        - tracking_number: Return shipment tracking
+        
+    Inspection Process:
+        1. RECEIVED: Package arrives at warehouse
+        2. INSPECTED: QA checks item condition
+        3. item_condition set (NEW, DAMAGED, etc.)
+        4. inspection_notes recorded
+        5. COMPLETED: Trigger refund or deny
+        
+    Refund Integration:
+        - One-to-one relationship with Refund
+        - Approved returns trigger refund creation
+        - Restocking fees applied based on item_condition
+        - Refund amount = order amount - restocking fee - original shipping
+        
+    Workflow Timestamps:
+        - requested_at: Customer submits return
+        - approved_at: Admin approves return
+        - rejected_at: Admin denies return
+        - shipped_back_at: Customer ships package
+        - received_at: Warehouse receives package
+        - inspected_at: Inspection completed
+        - completed_at: Refund processed
+        
+    Business Rules:
+        - Return window: 30 days from delivery
+        - Free return shipping for defects
+        - Restocking fee for buyer's remorse
+        - Photos required for damage claims
+    """
     __tablename__ = "returns"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

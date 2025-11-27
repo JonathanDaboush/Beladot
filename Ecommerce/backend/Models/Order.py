@@ -6,6 +6,13 @@ import enum
 
 
 class OrderStatus(str, enum.Enum):
+    """
+    Order lifecycle states.
+    
+    Workflow:
+        pending → confirmed → processing → shipped → delivered
+        Any state → cancelled or refunded
+    """
     PENDING = "pending"
     CONFIRMED = "confirmed"
     PROCESSING = "processing"
@@ -16,6 +23,43 @@ class OrderStatus(str, enum.Enum):
 
 
 class Order(Base):
+    """
+    SQLAlchemy ORM model for orders table.
+    
+    Complete order record with denormalized shipping address, pricing breakdown,
+    and order lifecycle tracking. Central entity for fulfillment operations.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Foreign Key: user_id -> users.id (CASCADE delete)
+        - Unique Constraint: order_number
+        - Indexes: id, user_id, order_number, status, created_at
+        
+    Data Integrity:
+        - Order number non-empty and unique
+        - All price components non-negative
+        - total_cents = subtotal + tax + shipping - discount (enforced)
+        - Shipping address fields required and validated
+        - Country exactly 2 characters (ISO-2)
+        - updated_at >= created_at
+        - Cascading relationships for items, payment, shipments, refunds, returns
+        
+    Relationships:
+        - Many-to-one with User
+        - One-to-many with OrderItem (cascade delete)
+        - One-to-one with Payment (cascade delete)
+        - One-to-many with Shipment (cascade delete)
+        - One-to-many with Refund (cascade delete)
+        - One-to-many with Return (cascade delete)
+        
+    Design Notes:
+        - Shipping address denormalized (snapshot at order time)
+        - Prices in cents (avoids floating-point issues)
+        - order_number for human-readable reference
+        - customer_notes and admin_notes separated for access control
+        - Status enum controls workflow state machine
+        - Total calculation enforced at database level
+    """
     __tablename__ = "orders"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

@@ -4,6 +4,32 @@ from database import Base
 
 
 class Address(Base):
+    """
+    SQLAlchemy ORM model for addresses table.
+    
+    Stores physical mailing addresses for users with validation constraints.
+    Supports one default address per user via unique constraint.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Foreign Key: user_id -> users.id (CASCADE delete)
+        - Indexes: id (primary)
+        
+    Data Integrity:
+        - Country must be exactly 2 characters (ISO-2 code)
+        - Required fields validated as non-empty (address_line1, city, postal_code)
+        - One default address per user (unique constraint with filter)
+        - Cascading delete when user deleted
+        
+    Relationships:
+        - Many-to-one with User (one user has many addresses)
+        
+    Design Notes:
+        - address_line2 optional for apartments/suites
+        - country stored as ISO 3166-1 alpha-2 code (US, CA, GB, etc.)
+        - is_default flag with partial unique index (PostgreSQL-specific)
+        - State/province stored as string (not standardized)
+    """
     __tablename__ = "addresses"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

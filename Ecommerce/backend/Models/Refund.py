@@ -15,6 +15,71 @@ class RefundStatus(str, enum.Enum):
 
 
 class Refund(Base):
+    """
+    SQLAlchemy ORM model for refunds table.
+    
+    Manages customer refunds with payment gateway integration, approval workflow,
+    and optional restocking fees. Supports both return-based and standalone refunds.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Foreign Keys: order_id -> orders.id (CASCADE), payment_id -> payments.id (RESTRICT),
+                       return_id -> returns.id (SET NULL)
+        - Indexes: id (primary), order_id, return_id, status, gateway_transaction_id,
+                   idempotency_key (unique), requested_at
+        
+    Data Integrity:
+        - Amount must be positive
+        - Restocking fee must be non-negative
+        - Reason cannot be empty
+        - Approval timestamp must be after request timestamp
+        - Processing timestamp must be after approval timestamp
+        - Payment deletion prevented (RESTRICT) to preserve refund history
+        
+    Relationships:
+        - Many-to-one with Order (order can have multiple refunds)
+        - Many-to-one with Payment (refund tied to specific payment)
+        - One-to-one with Return (optional, refund may not be for return)
+        
+    Refund Workflow:
+        1. PENDING: Customer requests refund
+        2. APPROVED: Admin reviews and approves
+        3. PROCESSING: Gateway API call initiated
+        4. PROCESSED: Funds returned to customer
+        5. REJECTED: Admin denies refund
+        6. FAILED: Gateway error (retry possible)
+        
+    Refund Types:
+        - Return-based: Linked to Return record (return_id populated)
+        - Standalone: Not linked to return (damaged goods, customer service)
+        
+    Gateway Integration:
+        - gateway_transaction_id: Payment provider's refund ID
+        - idempotency_key: Prevents duplicate refund requests
+        - Status tracking: Maps to provider's refund states
+        
+    Restocking Fee:
+        - restocking_fee_cents: Deducted from refund amount
+        - Applied for open-box returns, custom items, etc.
+        - Net refund = amount_cents - restocking_fee_cents
+        
+    Design Notes:
+        - idempotency_key: Unique per refund attempt (prevents double refunds)
+        - reason: Customer-provided explanation
+        - admin_notes: Internal notes for review/processing
+        - Timestamps track workflow progression
+        - RESTRICT on payment: Cannot delete payment with pending refunds
+        
+    Financial Reconciliation:
+        - Total refunded per order: SUM(amount_cents) WHERE order_id = X
+        - Refund rate: COUNT(refunds) / COUNT(orders)
+        - Average refund: AVG(amount_cents)
+        
+    Failure Recovery:
+        - FAILED status: Admin can retry processing
+        - gateway_transaction_id: Idempotent gateway calls
+        - Partial refunds: Multiple refunds per order allowed
+    """
     __tablename__ = "refunds"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

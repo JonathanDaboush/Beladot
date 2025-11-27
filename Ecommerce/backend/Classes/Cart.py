@@ -2,7 +2,46 @@ from typing import Any, Optional
 from datetime import datetime, timezone
 
 class Cart:
+    """
+    Domain model representing a shopping cart with item management and pricing capabilities.
+    
+    This class manages a user's shopping session, tracking items, quantities, applied coupons,
+    and providing total calculations. It integrates with repositories for persistence and
+    external services for pricing, tax, and coupon validation.
+    
+    Key Responsibilities:
+        - Manage cart items (add, update, remove, clear)
+        - Apply and track promotional coupons
+        - Calculate totals (subtotal, tax, shipping, discounts)
+        - Generate order payload for checkout
+        - Maintain updated_at timestamp for cart modifications
+    
+    Design Patterns:
+        - Aggregate Root: Cart owns CartItems lifecycle
+        - Service Integration: Delegates pricing/tax to PricingService
+        - Repository Pattern: Accepts repository for persistence operations
+    
+    Performance Considerations:
+        - Items stored in memory list for fast access during session
+        - Repository operations optional (supports testing without persistence)
+        - Totals calculated on-demand (not cached)
+    
+    Usage:
+        cart = Cart(id=1, user_id=123, created_at=now, updated_at=now)
+        cart.add_item(variant_id='v1', quantity=2, unit_price_cents=1500, 
+                     product_id='p1', item_metadata=None, repository=cart_repo)
+        totals = cart.get_totals(pricing_service=pricing_svc, shipping_address=addr)
+    """
     def __init__(self, id, user_id, created_at, updated_at):
+        """
+        Initialize a Cart domain object.
+        
+        Args:
+            id: Unique identifier (None for new carts before persistence)
+            user_id: Foreign key to the owning user
+            created_at: Cart creation timestamp
+            updated_at: Last modification timestamp
+        """
         self.id = id
         self.user_id = user_id
         self.created_at = created_at
@@ -11,6 +50,35 @@ class Cart:
         self._coupons = []
     
     def add_item(self, variant_id: str, quantity: int, unit_price_cents: int, product_id: str, item_metadata: Optional[dict], repository) -> 'CartItem':
+        """
+        Add an item to the cart or update quantity if variant already exists.
+        
+        If an item with the same variant_id and metadata already exists, its quantity
+        is incremented. Otherwise, a new CartItem is created and added to the cart.
+        
+        Args:
+            variant_id: Product variant identifier
+            quantity: Number of units to add (must be positive)
+            unit_price_cents: Price per unit in cents
+            product_id: Parent product identifier
+            item_metadata: Optional custom data (e.g., engraving, gift message)
+            repository: Repository for persisting changes (optional for testing)
+            
+        Returns:
+            CartItem: The newly created or updated cart item
+            
+        Raises:
+            ValueError: If quantity is not positive
+            
+        Side Effects:
+            - Updates self.updated_at to current UTC time
+            - Persists cart item and cart via repository if provided
+            - Appends item to self._items if new
+            
+        Design Notes:
+            - Items with same variant but different metadata are treated as separate
+            - Price is always updated to current unit_price_cents (supports price changes)
+        """
         if quantity <= 0:
             raise ValueError("Quantity must be positive")
         
@@ -49,6 +117,25 @@ class Cart:
         return cart_item
     
     def update_item(self, cart_item_id: str, quantity: int, repository) -> Optional['CartItem']:
+        """
+        Update the quantity of an existing cart item.
+        
+        Args:
+            cart_item_id: ID of the cart item to update
+            quantity: New quantity (0 removes the item, negative raises error)
+            repository: Repository for persisting changes (optional)
+            
+        Returns:
+            CartItem: Updated item, or None if item not found or quantity was 0
+            
+        Raises:
+            ValueError: If quantity is negative
+            
+        Side Effects:
+            - Updates self.updated_at to current UTC time
+            - Persists item and cart via repository if provided
+            - Removes item if quantity is 0
+        """
         if quantity < 0:
             raise ValueError("Quantity cannot be negative")
         
@@ -68,6 +155,19 @@ class Cart:
         return None
     
     def remove_item(self, cart_item_id: str, repository) -> None:
+        """
+        Remove an item from the cart by ID.
+        
+        Args:
+            cart_item_id: ID of the cart item to remove
+            repository: Repository for persisting deletion (optional)
+            
+        Side Effects:
+            - Removes item from self._items list
+            - Deletes item from database via repository if provided
+            - Updates self.updated_at to current UTC time
+            - Persists cart via repository if provided
+        """
         self._items = [item for item in self._items if item.id != cart_item_id]
         if repository:
             repository.delete_item(cart_item_id)
@@ -76,6 +176,18 @@ class Cart:
             repository.update(self)
     
     def clear(self, repository=None) -> None:
+        """
+        Remove all items and coupons from the cart.
+        
+        Args:
+            repository: Repository for persisting deletions (optional)
+            
+        Side Effects:
+            - Clears self._items and self._coupons lists
+            - Deletes all items from database via repository if provided
+            - Updates self.updated_at to current UTC time
+            - Persists cart via repository if provided
+        """
         item_ids = [item.id for item in self._items]
         self._items = []
         self._coupons = []
@@ -87,6 +199,25 @@ class Cart:
             repository.update(self)
     
     def apply_coupon(self, code: str, coupon_validator) -> dict[str, Any]:
+        """
+        Validate and apply a coupon code to the cart.
+        
+        Args:
+            code: Coupon code to apply
+            coupon_validator: Service to validate coupon eligibility
+            
+        Returns:
+            dict: Validation result with 'valid' (bool), 'reason' (str), 
+                  'discount_cents' (int)
+                  
+        Side Effects:
+            - Adds code to self._coupons list if valid
+            
+        Design Notes:
+            - Validation delegated to external service
+            - Duplicate coupons are prevented
+            - Invalid coupons are not stored but result is returned
+        """
         if not coupon_validator:
             return {"valid": False, "reason": "Coupon validation service unavailable", "discount_cents": 0}
         
@@ -99,6 +230,29 @@ class Cart:
         return result
     
     def get_totals(self, pricing_service=None, shipping_address=None, billing_address=None) -> dict[str, Any]:
+        """
+        Calculate comprehensive cart totals including taxes, shipping, and discounts.
+        
+        Args:
+            pricing_service: Service for calculating tax, shipping, discounts (optional)
+            shipping_address: Shipping address for tax/shipping calculation (optional)
+            billing_address: Billing address (optional, currently unused)
+            
+        Returns:
+            dict: Cart totals with keys:
+                - subtotal_cents: Sum of all item line totals
+                - discount_cents: Applied discounts from coupons
+                - tax_cents: Calculated tax
+                - shipping_cents: Shipping cost
+                - total_cents: Final amount (never negative)
+                - item_count: Number of items in cart
+                - items: List of item dictionaries
+                
+        Design Notes:
+            - Subtotal calculated internally, other amounts from pricing_service
+            - Without pricing_service, discount/tax/shipping default to 0
+            - Total is clamped to non-negative (prevents negative checkout)
+        """
         subtotal_cents = sum(item.line_total_cents() for item in self._items)
         
         discount_cents = 0
@@ -124,6 +278,23 @@ class Cart:
         }
     
     def to_order_payload(self, billing_address, shipping_address, pricing_service=None) -> dict[str, Any]:
+        """
+        Convert cart to order creation payload for checkout.
+        
+        Args:
+            billing_address: Billing address dictionary
+            shipping_address: Shipping address dictionary
+            pricing_service: Service for final total calculations (optional)
+            
+        Returns:
+            dict: Order payload containing cart_id, user_id, items, addresses,
+                  coupons, and all calculated totals
+                  
+        Design Notes:
+            - This is a data transfer object (DTO) for order creation
+            - Includes all necessary information to create an Order
+            - Items include full details (variant, price, quantity, metadata)
+        """
         totals = self.get_totals(pricing_service, shipping_address, billing_address)
         
         return {

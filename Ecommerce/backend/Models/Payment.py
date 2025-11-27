@@ -25,6 +25,70 @@ class PaymentMethod(str, enum.Enum):
 
 
 class Payment(Base):
+    """
+    SQLAlchemy ORM model for payments table.
+    
+    Records payment transactions for orders with gateway integration, status tracking,
+    and raw response storage for debugging. Supports multiple payment methods and
+    refund workflows.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Foreign Key: order_id -> orders.id (CASCADE)
+        - Indexes: id (primary), order_id, status, transaction_id, created_at
+        
+    Data Integrity:
+        - Amount must be positive
+        - Timestamps: updated_at >= created_at
+        - Cascading delete when order deleted
+        
+    Relationships:
+        - One-to-one with Order (each order has one payment)
+        
+    Payment Status Lifecycle:
+        1. PENDING: Payment initiated, awaiting processing
+        2. AUTHORIZED: Funds reserved (credit card hold)
+        3. COMPLETED: Payment captured successfully
+        4. FAILED: Payment declined/failed
+        5. REFUNDED: Full refund processed
+        6. VOIDED: Authorization cancelled before capture
+        7. DISPUTED: Chargeback/dispute filed
+        
+    Payment Methods:
+        - CREDIT_CARD: Visa, Mastercard, Amex, etc.
+        - DEBIT_CARD: Debit card transactions
+        - PAYPAL: PayPal integration
+        - STRIPE: Stripe payment gateway
+        - BANK_TRANSFER: ACH/wire transfers
+        - CASH_ON_DELIVERY: Pay on delivery
+        
+    Gateway Integration:
+        - transaction_id: Payment provider's unique ID (Stripe charge ID, PayPal transaction ID)
+        - raw_response: Full JSON response from gateway API (for debugging/reconciliation)
+        - Enables idempotent operations via transaction_id lookup
+        
+    Design Notes:
+        - amount_cents: Stored in smallest currency unit (e.g., cents for USD)
+        - raw_response: Preserves complete gateway response for auditing
+        - Immutable after COMPLETED (updates only for status changes)
+        - One payment per order (no split payments)
+        
+    Financial Reconciliation:
+        - Match transaction_id with gateway reports
+        - Verify amount_cents matches gateway amount
+        - Track failed payments for retry/analysis
+        
+    Failure Handling:
+        - FAILED status: Customer can retry with different method
+        - raw_response: Contains gateway error codes/messages
+        - Support team uses transaction_id for gateway support tickets
+        
+    Refund Support:
+        - Payment must be COMPLETED to refund
+        - Refund records link to this payment via foreign key
+        - Status changes to REFUNDED after full refund
+        - Partial refunds keep COMPLETED status (tracked via Refund table)
+    """
     __tablename__ = "payments"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

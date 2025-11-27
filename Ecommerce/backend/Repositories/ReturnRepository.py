@@ -6,11 +6,53 @@ from Models.AuditLog import AuditLog
 
 
 class ReturnRepository:
+    """
+    Data access layer for Return entities (customer returns/RMAs).
+    
+    This repository manages product return requests and associated refunds,
+    tracking the return lifecycle from initiation through completion.
+    
+    Responsibilities:
+        - Return CRUD operations
+        - Refund creation for approved returns
+        - Audit log for return lifecycle events
+    
+    Design Patterns:
+        - Repository Pattern: Isolates return data access
+        - Async/Await: Non-blocking database I/O
+    
+    Usage:
+        repository = ReturnRepository(db_session)
+        await repository.update(return_obj)
+        refund = await repository.create_refund(refund_obj)
+    """
+    
     def __init__(self, db: AsyncSession):
+        """
+        Initialize the repository with a database session.
+        
+        Args:
+            db: Async SQLAlchemy session for database operations
+        """
         self.db = db
         self.model = Return
     
     async def update(self, return_obj: Return):
+        """
+        Update return status and processing details.
+        
+        Args:
+            return_obj: Return object with modifications
+            
+        Side Effects:
+            - Updates return.updated_at
+            - Commits transaction immediately
+            
+        Common Updates:
+            - Status changes (requested → approved → completed)
+            - Inspection notes
+            - Resolution details
+        """
         await self.db.merge(return_obj)
         await self.db.commit()
         await self.db.refresh(return_obj)
@@ -23,6 +65,19 @@ class ReturnRepository:
         return audit_log
     
     async def create_refund(self, refund: Refund) -> Refund:
+        """
+        Create refund for an approved return.
+        
+        Args:
+            refund: Refund object to persist
+            
+        Returns:
+            Refund: Created refund with database-generated ID
+            
+        Side Effects:
+            - Links refund to return
+            - Commits transaction immediately
+        """
         self.db.add(refund)
         await self.db.commit()
         await self.db.refresh(refund)

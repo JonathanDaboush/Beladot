@@ -4,7 +4,33 @@ from Models.Coupon import Coupon
 
 
 class CouponRepository:
+    """
+    Data access layer for Coupon entities.
+    
+    This repository manages coupon/promotion code data access and tracks
+    usage statistics for per-user and global usage limits.
+    
+    Responsibilities:
+        - Coupon CRUD operations
+        - Track coupon usage by user
+        - Support coupon validation queries
+    
+    Design Patterns:
+        - Repository Pattern: Isolates coupon data access
+        - Async/Await: Non-blocking database I/O
+    
+    Usage:
+        repository = CouponRepository(db_session)
+        usage_count = await repository.get_coupon_usage_count(user_id, coupon_id)
+    """
+    
     def __init__(self, db: AsyncSession):
+        """
+        Initialize the repository with a database session.
+        
+        Args:
+            db: Async SQLAlchemy session for database operations
+        """
         self.db = db
         self.model = Coupon
     

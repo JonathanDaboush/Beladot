@@ -4,6 +4,62 @@ from database import Base
 
 
 class Coupon(Base):
+    """
+    SQLAlchemy ORM model for coupons table.
+    
+    Promotional discount codes with flexible targeting and usage limits.
+    Supports percentage discounts, fixed amount reductions, and free shipping.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Indexes: id (primary), code (unique), starts_at, expires_at
+        
+    Data Integrity:
+        - Code must be unique and non-empty (e.g., "SAVE20")
+        - Discount type: percentage, fixed, or free_shipping
+        - Discount value must be non-negative
+        - Expiration date must be after start date
+        - Usage count cannot exceed usage limit
+        - All monetary amounts in cents
+        
+    Discount Types:
+        - percentage: Discount as % of cart total (e.g., 20% off)
+        - fixed: Flat amount off (e.g., $5 off)
+        - free_shipping: Waives shipping costs
+        
+    Usage Controls:
+        - usage_limit: Global cap (e.g., first 100 customers)
+        - per_user_limit: Per-customer cap (e.g., one per user)
+        - usage_count: Tracks total redemptions
+        - is_active: Manual enable/disable toggle
+        
+    Targeting:
+        - min_purchase_amount_cents: Minimum cart value requirement
+        - max_discount_amount_cents: Cap on discount (prevents abuse)
+        - applicable_product_ids: JSON array of eligible product IDs
+        - applicable_category_ids: JSON array of eligible category IDs
+        
+    Design Notes:
+        - Code stored uppercase for case-insensitive matching
+        - Time window: starts_at to expires_at
+        - Empty targeting arrays = applies to all products
+        - Percentage discounts capped by max_discount_amount_cents
+        - Usage tracking enables "limited time" promotions
+        
+    Validation Flow:
+        1. Check is_active and time window
+        2. Verify usage limits not exceeded
+        3. Validate cart meets min_purchase_amount
+        4. Check product/category targeting
+        5. Calculate discount (respect max_discount_amount)
+        6. Increment usage_count on order completion
+        
+    Failure Modes:
+        - Expired: expires_at < now()
+        - Usage exceeded: usage_count >= usage_limit
+        - Cart too small: total < min_purchase_amount_cents
+        - Wrong products: Product not in applicable_product_ids
+    """
     __tablename__ = "coupons"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

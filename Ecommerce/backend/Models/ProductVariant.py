@@ -4,6 +4,71 @@ from database import Base
 
 
 class ProductVariant(Base):
+    """
+    SQLAlchemy ORM model for product_variants table.
+    
+    Represents specific SKUs of a product with different attributes (size, color, etc.).
+    Supports independent pricing, inventory, and up to 3 option dimensions per variant.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Foreign Key: product_id -> products.id (CASCADE)
+        - Indexes: id (primary), product_id, sku (unique)
+        
+    Data Integrity:
+        - SKU must be unique across all variants
+        - Name and SKU cannot be empty
+        - Price must be non-negative
+        - Compare-at price (MSRP) must be >= selling price
+        - Cost must be non-negative
+        - Stock quantity must be non-negative
+        - Option pairs must be complete (name + value together or both NULL)
+        - Inventory policy: 'deny' (prevent oversell) or 'continue' (allow backorder)
+        
+    Relationships:
+        - Many-to-one with Product (product has many variants)
+        
+    Variant Options:
+        - Supports up to 3 option dimensions
+        - option1: Size (e.g., "Size": "Large")
+        - option2: Color (e.g., "Color": "Blue")
+        - option3: Material (e.g., "Material": "Cotton")
+        - Each option requires both name and value (enforced by constraints)
+        
+    Pricing:
+        - price_cents: Current selling price
+        - compare_at_price_cents: Original/MSRP price (for "was $X, now $Y")
+        - cost_cents: Wholesale/unit cost (for profit margin calculation)
+        
+    Inventory Management:
+        - stock_quantity: Available units
+        - track_stock: Enable/disable inventory tracking
+        - inventory_management: System managing stock ("shopify", "custom", etc.)
+        - inventory_policy:
+          * "deny": Prevent purchase when out of stock
+          * "continue": Allow backorders/pre-orders
+        
+    Design Notes:
+        - SKU: Unique identifier for inventory/shipping systems
+        - name: Display name (e.g., "Large Blue Cotton T-Shirt")
+        - Variant without options: Simple product (1 variant)
+        - Product with variants: Options create variant matrix
+        
+    Example Variant Matrix:
+        Product: T-Shirt
+        - Variant 1: option1="Size":"S", option2="Color":"Red"
+        - Variant 2: option1="Size":"S", option2="Color":"Blue"
+        - Variant 3: option1="Size":"M", option2="Color":"Red"
+        - Variant 4: option1="Size":"M", option2="Color":"Blue"
+        
+    Stock Tracking:
+        - track_stock = true: Decrement on purchase, prevent oversell
+        - track_stock = false: Unlimited availability (digital products, services)
+        
+    Profit Margin:
+        - margin = price_cents - cost_cents
+        - margin% = ((price - cost) / price) × 100
+    """
     __tablename__ = "product_variants"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

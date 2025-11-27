@@ -1,7 +1,59 @@
 from typing import Any, Optional
 
 class Product:
+    """
+    Domain model representing a product in the catalog with variants and pricing.
+    
+    This class manages product information, pricing logic, variant relationships,
+    and image associations. It provides caching for performance-critical calculations
+    like price ranges and supports multi-variant products.
+    
+    Key Responsibilities:
+        - Store core product information (name, description, pricing)
+        - Manage product variants (colors, sizes, etc.)
+        - Handle product images with primary image selection
+        - Calculate price ranges across variants
+        - Provide default variant for simple products
+        - Support inventory tracking (SKU, stock quantity)
+    
+    Design Patterns:
+        - Aggregate Root: Owns variants and images
+        - Lazy Loading: Variants and images loaded on-demand
+        - Caching: Price range cached for performance
+    
+    Performance Considerations:
+        - Price range cached after first calculation
+        - Variant/image collections stored in memory
+        - Cache invalidated on variant/price changes
+    
+    Design Notes:
+        - Prices stored in cents (avoids floating-point errors)
+        - compare_at_price_cents enables strike-through pricing
+        - slug used for SEO-friendly URLs
+        - This is a domain object; persistence handled by ProductRepository
+    """
     def __init__(self, id, name, description, short_description, slug, price_cents, compare_at_price_cents, cost_cents, sku, stock_quantity, category_id, is_active, weight, dimensions, created_at, updated_at):
+        """
+        Initialize a Product domain object.
+        
+        Args:
+            id: Unique identifier (None for new products before persistence)
+            name: Product name
+            description: Full product description (supports HTML)
+            short_description: Brief description for listing pages
+            slug: URL-friendly identifier (e.g., 'blue-cotton-shirt')
+            price_cents: Current selling price in cents
+            compare_at_price_cents: Original price for showing discounts (None if no discount)
+            cost_cents: Product cost/COGS in cents
+            sku: Stock Keeping Unit identifier
+            stock_quantity: Available inventory count
+            category_id: Foreign key to product category
+            is_active: Whether product is visible to customers
+            weight: Product weight (for shipping calculations)
+            dimensions: Product dimensions dictionary (for shipping)
+            created_at: Product creation timestamp
+            updated_at: Last modification timestamp
+        """
         self.id = id
         self.name = name
         self.description = description
@@ -23,6 +75,22 @@ class Product:
         self._price_range_cache = None
     
     def get_default_variant(self):
+        """
+        Get the default variant for this product, prioritizing in-stock variants.
+        
+        Returns:
+            ProductVariant: First in-stock variant, or first variant overall, or None
+            
+        Selection Logic:
+            1. Prefer variants with stock_quantity > 0
+            2. If no in-stock variants, return first variant regardless of stock
+            3. If no variants, return None
+            
+        Design Notes:
+            - Used for single-variant products or as fallback
+            - Order matters: first in-stock variant wins
+            - Assumes variants loaded into self._variants
+        """
         if not self._variants:
             return None
         
@@ -34,6 +102,25 @@ class Product:
         return active_variants[0] if active_variants else None
     
     def get_price_range(self) -> dict[str, int]:
+        """
+        Calculate the min and max prices across all variants.
+        
+        Returns:
+            dict: Contains 'min_cents' and 'max_cents' keys
+            
+        Caching:
+            - Result cached in self._price_range_cache
+            - Cache cleared when variants change
+            
+        Logic:
+            - If no variants, returns product's base price
+            - Prioritizes in-stock variants for range
+            - Falls back to all variants if none in stock
+            
+        Design Notes:
+            - Enables "From $X" pricing display
+            - Cache improves performance for product listings
+        """
         if self._price_range_cache is not None:
             return self._price_range_cache
         
@@ -69,6 +156,26 @@ class Product:
         return self._price_range_cache
     
     def to_dict(self) -> dict[str, Any]:
+        """
+        Convert product to dictionary for API responses.
+        
+        Returns:
+            dict: Product data with computed fields (price_range, discount info,
+                  default variant, primary image)
+                  
+        Includes:
+            - Core product fields
+            - Price range (min/max across variants)
+            - Discount calculation (percentage off)
+            - Default variant ID
+            - Primary and all image IDs
+            - Active/stock status
+            
+        Design Notes:
+            - Images sorted by is_primary flag, then sort_order
+            - Discount percentage rounded to integer
+            - Suitable for product listing and detail pages
+        """
         default_variant = self.get_default_variant()
         price_range = self.get_price_range()
         

@@ -2,7 +2,61 @@ from typing import Any, Optional
 from datetime import datetime, timezone
 
 class Return:
+    """
+    Domain model representing a customer return request with inspection and refund orchestration.
+    
+    This class manages the return merchandise authorization (RMA) process, from customer
+    request through inspection, restocking, and refund processing. It coordinates with
+    inventory and payment services for complete return handling.
+    
+    Key Responsibilities:
+        - Track return lifecycle (requested, approved, received, inspected, completed)
+        - Store return reason and item condition assessments
+        - Manage return items list (what's being returned)
+        - Link to customer-provided photos
+        - Approve/reject returns with notifications
+        - Inspect received items and calculate refund amounts
+        - Coordinate inventory restocking
+        - Initiate refund processing
+    
+    Return Lifecycle:
+        requested → approved → shipped_back → received → inspected → completed
+                  → rejected (terminal)
+    
+    Item Condition Grading:
+        - good: Full refund, restock as new
+        - acceptable: 80% refund, 20% restocking fee
+        - damaged: No refund, not restocked
+    
+    Design Notes:
+        - return_items is list of dicts with item details
+        - photos is list of blob IDs for customer evidence
+        - admin_notes and inspection_notes separated for access control
+        - This is a domain object; persistence handled by ReturnRepository
+    """
     def __init__(self, id, order_id, reason, item_condition, status, return_items, photos, tracking_number, inspection_notes, admin_notes, requested_at, approved_at, rejected_at, shipped_back_at, received_at, inspected_at, completed_at):
+        """
+        Initialize a Return domain object.
+        
+        Args:
+            id: Unique identifier (None for new returns before persistence)
+            order_id: Foreign key to the original order
+            reason: Customer's reason for return
+            item_condition: Condition assessment dict after inspection
+            status: Return status (requested, approved, rejected, received, completed)
+            return_items: List of dicts with item details being returned
+            photos: List of blob IDs for customer-provided photos
+            tracking_number: Carrier tracking number for return shipment
+            inspection_notes: Inspector's assessment notes
+            admin_notes: Internal notes (not visible to customer)
+            requested_at: When customer requested return
+            approved_at: When admin approved return
+            rejected_at: When admin rejected return
+            shipped_back_at: When customer shipped items back
+            received_at: When warehouse received items
+            inspected_at: When inspector assessed condition
+            completed_at: When return fully processed (refund issued)
+        """
         self.id = id
         self.order_id = order_id
         self.reason = reason
@@ -22,6 +76,30 @@ class Return:
         self.completed_at = completed_at
     
     def approve(self, actor_id: str, repository=None, notification_service=None) -> None:
+        """
+        Approve the return request and notify the customer.
+        
+        Args:
+            actor_id: ID of user approving the return
+            repository: Repository for persisting changes and audit log (optional)
+            notification_service: Service for customer notification (optional)
+            
+        Raises:
+            ValueError: If return status is not 'requested'
+            
+        Side Effects:
+            - Changes status to 'approved'
+            - Sets approved_at to current time
+            - Appends approval note to admin_notes with timestamp
+            - Creates audit log entry
+            - Sends approval notification to customer
+            - Persists return via repository
+            
+        Design Notes:
+            - Only 'requested' returns can be approved (guards state transitions)
+            - Notification failures silently ignored (logged elsewhere)
+            - Admin notes accumulate with timestamps for full history
+        """
         if self.status != "requested":
             raise ValueError(f"Cannot approve return with status: {self.status}")
         
@@ -46,6 +124,42 @@ class Return:
                 pass
     
     def receive(self, items_condition: dict, actor_id: str, payment_service, inventory_service, repository) -> Optional['Refund']:
+        """
+        Process received return items, inspect condition, restock, and issue refund.
+        
+        Args:
+            items_condition: Dict mapping item_id to condition ('good', 'acceptable', 'damaged')
+            actor_id: ID of user receiving/inspecting the return
+            payment_service: Service for payment operations (currently unused)
+            inventory_service: Service for restocking items
+            repository: Repository for persisting changes and creating refund
+            
+        Returns:
+            Refund: Created refund object if refund amount > 0, None otherwise
+            
+        Raises:
+            ValueError: If return status is not 'approved' or 'shipped_back'
+            
+        Side Effects:
+            - Changes status to 'received', then 'completed' if refund issued
+            - Sets received_at and inspected_at to current time
+            - Stores items_condition assessment
+            - Creates inspection_notes with actor and timestamp
+            - Restocks items with 'good' or 'acceptable' condition
+            - Creates Refund record with calculated amounts
+            - Sets completed_at timestamp
+            - Persists return and refund via repository
+            
+        Refund Calculation:
+            - 'good': Full refund (100%), restock as new
+            - 'acceptable': 80% refund, 20% restocking fee
+            - 'damaged': No refund, not restocked
+            
+        Design Notes:
+            - Restocking failures silently ignored (logged elsewhere)
+            - Refund only created if total amount > 0
+            - Restocking fee tracked separately in Refund
+        """
         if self.status not in ["approved", "shipped_back"]:
             raise ValueError(f"Cannot receive return with status: {self.status}")
         

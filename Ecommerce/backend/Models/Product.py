@@ -5,6 +5,42 @@ from database import Base
 
 
 class Product(Base):
+    """
+    SQLAlchemy ORM model for products table.
+    
+    Core catalog entity storing product information, pricing, and inventory.
+    Supports variants (sizes, colors), images, and categorization.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Foreign Key: category_id -> categories.id (SET NULL on delete)
+        - Unique Constraints: slug, sku
+        - Indexes: id, name, slug, sku, category_id, is_active, created_at
+        
+    Data Integrity:
+        - Name, slug, SKU must be non-empty
+        - Prices non-negative, compare_at_price >= price if set
+        - Stock quantity non-negative
+        - Weight positive if set
+        - updated_at >= created_at
+        - Cascading relationships for images, variants, reviews
+        
+    Relationships:
+        - Many-to-one with Category
+        - One-to-many with ProductImage (cascade delete)
+        - One-to-many with ProductVariant (cascade delete)
+        - One-to-many with CartItem (no cascade, allows orphan cart items)
+        - One-to-many with Review (cascade delete)
+        - One-to-many with InventoryTransaction (cascade delete)
+        
+    Design Notes:
+        - Prices stored in cents (avoids floating-point issues)
+        - compare_at_price_cents enables strike-through pricing
+        - cost_cents tracks COGS for margin analysis
+        - slug used for SEO-friendly URLs (must be unique)
+        - weight in grams, dimensions as string
+        - Timestamps with timezone support
+    """
     __tablename__ = "products"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

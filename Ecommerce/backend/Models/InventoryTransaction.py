@@ -15,6 +15,58 @@ class TransactionType(str, enum.Enum):
 
 
 class InventoryTransaction(Base):
+    """
+    SQLAlchemy ORM model for inventory_transactions table.
+    
+    Immutable audit log for all inventory movements. Implements double-entry
+    ledger pattern where every stock change is recorded with before/after snapshots.
+    
+    Database Schema:
+        - Primary Key: id (auto-increment)
+        - Foreign Keys: product_id -> products.id (CASCADE), actor_id -> users.id (SET NULL)
+        - Indexes: id (primary), product_id, reference_id, created_at
+        
+    Data Integrity:
+        - quantity_change cannot be zero (must be positive or negative)
+        - quantity_after must be non-negative (no negative stock)
+        - Immutable records (no updates, only inserts)
+        
+    Relationships:
+        - Many-to-one with Product (product has many transactions)
+        - Many-to-one with User (actor who initiated the transaction)
+        
+    Transaction Types:
+        - PURCHASE: Customer order decreases stock (negative change)
+        - RESTOCK: Supplier delivery increases stock (positive change)
+        - RETURN: Customer return increases stock (positive change)
+        - ADJUSTMENT: Manual correction (positive or negative)
+        - DAMAGE: Damaged goods removed (negative change)
+        - LOSS: Lost/stolen inventory (negative change)
+        
+    Ledger Pattern:
+        - Every transaction records:
+          * quantity_change: Delta applied (e.g., -5 for purchase of 5 units)
+          * quantity_after: Snapshot of stock level after transaction
+        - Enable auditing: Reconstruct inventory at any point in time
+        - Detect discrepancies: Compare physical count vs. ledger
+        
+    Design Notes:
+        - reference_id: Links to source record (order_id, shipment_id, etc.)
+        - actor_id: User who initiated (admin, system, customer)
+        - notes: Free-text explanation for adjustments/corrections
+        - created_at: Immutable timestamp (transaction time)
+        - No updates allowed: Corrections use ADJUSTMENT transactions
+        
+    Query Patterns:
+        - Current stock: Latest quantity_after for product_id
+        - Stock history: SELECT * WHERE product_id = X ORDER BY created_at
+        - Variance report: SUM(quantity_change) GROUP BY transaction_type
+        - Audit trail: Filter by reference_id to see order impact
+        
+    Reconciliation:
+        - Physical count != quantity_after → Create ADJUSTMENT transaction
+        - Example: Expected 100, counted 95 → ADJUSTMENT of -5
+    """
     __tablename__ = "inventory_transactions"
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)

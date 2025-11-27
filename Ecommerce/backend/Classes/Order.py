@@ -2,7 +2,68 @@ from typing import Any, Optional
 from datetime import datetime, timezone
 
 class Order:
+    """
+    Domain model representing a customer order with payment and fulfillment orchestration.
+    
+    This class is the core of the order lifecycle, managing state transitions from
+    pending through paid, shipped, and delivered. It orchestrates payment capture,
+    inventory management, cancellations, and refunds.
+    
+    Key Responsibilities:
+        - Track order state (pending, paid, shipped, delivered, cancelled, refunded)
+        - Capture and manage payments
+        - Handle order cancellations with refunds
+        - Process partial and full refunds
+        - Coordinate with inventory service for stock management
+        - Maintain shipping address (denormalized for immutability)
+        - Track order totals (subtotal, tax, shipping, discount)
+    
+    State Machine:
+        pending → paid → processing → shipped → delivered
+        Any state → cancelled (with conditions)
+        paid/shipped → refunded (partial or full)
+    
+    Design Patterns:
+        - Aggregate Root: Owns OrderItems, Payments, Shipments
+        - State Machine: Explicit state transitions with guards
+        - Service Coordination: Integrates payment, inventory services
+    
+    Invariants:
+        - Delivered orders cannot be cancelled
+        - Refund amount cannot exceed remaining refundable total
+        - Cancelled orders release inventory reservations
+        - Payment required before shipping
+    
+    Design Notes:
+        - Shipping address denormalized (immutable snapshot)
+        - admin_notes and customer_notes separated for access control
+        - This is a domain object; persistence handled by OrderRepository
+    """
     def __init__(self, id, user_id, order_number, status, subtotal_cents, tax_cents, shipping_cost_cents, discount_cents, total_cents, shipping_address_line1, shipping_address_line2, shipping_city, shipping_state, shipping_country, shipping_postal_code, customer_notes, admin_notes, created_at, updated_at):
+        """
+        Initialize an Order domain object.
+        
+        Args:
+            id: Unique identifier (None for new orders before persistence)
+            user_id: Foreign key to the ordering user
+            order_number: Human-readable order reference (e.g., 'ORD-1001')
+            status: Order state (pending, paid, processing, shipped, delivered, cancelled, refunded)
+            subtotal_cents: Sum of line items before tax/shipping/discounts
+            tax_cents: Calculated tax amount
+            shipping_cost_cents: Shipping fee
+            discount_cents: Total discounts applied
+            total_cents: Final amount (subtotal + tax + shipping - discount)
+            shipping_address_line1: Address line 1 (denormalized)
+            shipping_address_line2: Address line 2 (denormalized)
+            shipping_city: City (denormalized)
+            shipping_state: State/province (denormalized)
+            shipping_country: Country code (denormalized)
+            shipping_postal_code: Postal code (denormalized)
+            customer_notes: Customer's delivery instructions
+            admin_notes: Internal notes (not visible to customer)
+            created_at: Order creation timestamp
+            updated_at: Last modification timestamp
+        """
         self.id = id
         self.user_id = user_id
         self.order_number = order_number
@@ -27,6 +88,34 @@ class Order:
         self._shipments = []
     
     def capture_payment(self, payment_gateway_response: dict, payment_service, inventory_service, repository) -> 'Payment':
+        """
+        Capture payment for the order and transition to paid status.
+        
+        Args:
+            payment_gateway_response: Response from payment gateway with transaction details
+            payment_service: Payment service (currently unused, reserved for future)
+            inventory_service: Service to confirm inventory reservations
+            repository: Repository for persisting payment and order
+            
+        Returns:
+            Payment: The created or existing completed payment
+            
+        Side Effects:
+            - Creates Payment record with status 'completed'
+            - Changes order status to 'paid'
+            - Updates order updated_at timestamp
+            - Confirms inventory reservations for all order items
+            - Persists payment and order via repository
+            
+        Idempotency:
+            - If order already paid, returns existing payment (no duplicate charge)
+            - Safe to call multiple times
+            
+        Design Notes:
+            - Payment amount from gateway response (may differ for partial payments)
+            - Inventory confirmation failures silently ignored (logged elsewhere)
+            - Transaction ID from gateway stored for reconciliation
+        """
         if self.status in ["paid", "completed", "shipped", "delivered"]:
             existing_payment = next((p for p in self._payments if p.status == "completed"), None)
             if existing_payment:
@@ -65,6 +154,38 @@ class Order:
         return payment
     
     def cancel(self, reason: str, actor_id: Optional[str], payment_service, inventory_service, repository) -> bool:
+        """
+        Cancel the order with optional refund and inventory release.
+        
+        Args:
+            reason: Explanation for cancellation (stored in admin_notes)
+            actor_id: ID of user/system performing cancellation
+            payment_service: Service for processing refunds
+            inventory_service: Service for releasing inventory reservations
+            repository: Repository for persisting changes and audit log
+            
+        Returns:
+            bool: True if cancellation successful, False if not allowed
+            
+        Cancellation Rules:
+            - Cannot cancel if already cancelled, delivered, or refunded
+            - Paid/processing/shipped orders require refund before cancellation
+            - Refund failure blocks cancellation
+            
+        Side Effects:
+            - Sets status to 'cancelled'
+            - Appends cancellation note to admin_notes with timestamp
+            - Updates order updated_at timestamp
+            - Processes refund via payment service if order was paid
+            - Releases inventory reservations for all items
+            - Creates audit log entry
+            - Persists order via repository
+            
+        Design Notes:
+            - Inventory release failures silently ignored (idempotent operation)
+            - Admin notes accumulate with timestamps for full history
+            - Refund uses most recent completed payment
+        """
         if self.status in ["cancelled", "delivered", "refunded"]:
             return False
         
@@ -104,6 +225,43 @@ class Order:
         return True
     
     def refund(self, amount_cents: int, reason: str, payment_service, inventory_service, repository) -> Optional['Refund']:
+        """
+        Process a partial or full refund for the order.
+        
+        Args:
+            amount_cents: Amount to refund in cents (must be positive)
+            reason: Explanation for refund
+            payment_service: Service for processing gateway refund
+            inventory_service: Service for inventory adjustments (currently unused)
+            repository: Repository for persisting refund and order
+            
+        Returns:
+            Refund: The created refund record
+            
+        Raises:
+            ValueError: If amount_cents <= 0, exceeds available refund, no payment found,
+                       or gateway refund fails
+                       
+        Refund Rules:
+            - Amount must be positive
+            - Cannot exceed (total - already_refunded)
+            - Requires completed payment
+            - Gateway refund must succeed
+            - Full refund changes status to 'refunded'
+            
+        Side Effects:
+            - Creates Refund record with status 'completed'
+            - Processes refund through payment gateway
+            - Updates order status to 'refunded' if full refund
+            - Updates order updated_at timestamp
+            - Persists refund and order via repository
+            
+        Design Notes:
+            - Tracks total refunded via _refunds collection
+            - Partial refunds leave order in current status
+            - Gateway transaction ID stored in refund record
+            - Restocking fees supported but currently 0
+        """
         if amount_cents <= 0:
             raise ValueError("Refund amount must be positive")
         
@@ -152,6 +310,21 @@ class Order:
         return refund
     
     def to_dict(self, include_items: bool = False, include_shipments: bool = False) -> dict[str, Any]:
+        """
+        Convert order to dictionary for API responses.
+        
+        Args:
+            include_items: If True, include full order items list
+            include_shipments: If True, include shipments list
+            
+        Returns:
+            dict: Order data with optional nested items/shipments
+            
+        Design Notes:
+            - Shipping address returned as nested object
+            - admin_notes excluded (use separate endpoint with auth)
+            - Conditional includes reduce payload size for listings
+        """
         result = {
             "id": self.id,
             "user_id": self.user_id,
