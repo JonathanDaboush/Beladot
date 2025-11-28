@@ -32,7 +32,7 @@ class Product:
         - slug used for SEO-friendly URLs
         - This is a domain object; persistence handled by ProductRepository
     """
-    def __init__(self, id, name, description, short_description, slug, price_cents, compare_at_price_cents, cost_cents, sku, stock_quantity, category_id, is_active, weight, dimensions, created_at, updated_at):
+    def __init__(self, id, name, description, short_description, slug, price_cents, compare_at_price_cents, cost_cents, sku, category_id, is_active, weight, dimensions, created_at, updated_at):
         """
         Initialize a Product domain object.
         
@@ -63,7 +63,7 @@ class Product:
         self.compare_at_price_cents = compare_at_price_cents
         self.cost_cents = cost_cents
         self.sku = sku
-        self.stock_quantity = stock_quantity
+        # self.stock_quantity = stock_quantity  # REMOVED: stock is managed at variant level
         self.category_id = category_id
         self.is_active = is_active
         self.weight = weight
@@ -82,7 +82,7 @@ class Product:
             ProductVariant: First in-stock variant, or first variant overall, or None
             
         Selection Logic:
-            1. Prefer variants with stock_quantity > 0
+            1. Prefer variants with stock_quantity > 0 (on variants only)
             2. If no in-stock variants, return first variant regardless of stock
             3. If no variants, return None
             
@@ -206,7 +206,7 @@ class Product:
             "compare_at_price_cents": self.compare_at_price_cents,
             "price_range": price_range,
             "sku": self.sku,
-            "stock_quantity": self.stock_quantity,
+            # "stock_quantity": self.stock_quantity,  # REMOVED: stock is managed at variant level
             "is_active": self.is_active,
             "category_id": self.category_id,
             "default_variant_id": default_variant.id if default_variant else None,

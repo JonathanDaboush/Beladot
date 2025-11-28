@@ -61,7 +61,7 @@ class Coupon(Base):
         - Wrong products: Product not in applicable_product_ids
     """
     __tablename__ = "coupons"
-    
+
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     code = Column(String(50), unique=True, nullable=False, index=True)
     description = Column(Text, nullable=True)
@@ -79,7 +79,12 @@ class Coupon(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-    
+    # New field for external coupon provider metadata (e.g., Honey, Rakuten, etc.)
+    external_metadata = Column(JSON, nullable=True, comment="External coupon provider metadata (e.g., source, restrictions, provider info)")
+    # Promotion fields
+    promotion = Column(Boolean, default=False, nullable=False, comment="True if this coupon is an automatic promotion")
+    promotion_metadata = Column(JSON, nullable=True, comment="Promotion metadata: schedule, budget, state, rules, targets, channels, exclusions, audit, usage, etc.")
+
     __table_args__ = (
         CheckConstraint("length(trim(code)) > 0", name='check_code_present'),
         CheckConstraint("discount_type IN ('percentage', 'fixed', 'free_shipping')", name='check_discount_type_valid'),
@@ -93,6 +98,6 @@ class Coupon(Base):
         CheckConstraint("expires_at > starts_at", name='check_expires_after_starts'),
         CheckConstraint("updated_at >= created_at", name='check_updated_after_created'),
     )
-    
+
     def __repr__(self):
         return f"<Coupon(id={self.id}, code={self.code}, discount_value_cents={self.discount_value_cents})>"

@@ -63,6 +63,17 @@ class CartItemRepository:
         )
         return result.scalars().all()
     
+    async def get_by_cart_id(self, cart_id: int):
+        """
+        Retrieve all cart items for a given cart ID.
+        Args:
+            cart_id (int): The ID of the cart.
+        Returns:
+            List[CartItem]: List of CartItem objects for the cart.
+        """
+        result = await self.db.execute(select(self.model).where(self.model.cart_id == cart_id))
+        return result.scalars().all()
+    
     async def create(self, cart_item: CartItem) -> CartItem:
         """
         Add an item to a cart.

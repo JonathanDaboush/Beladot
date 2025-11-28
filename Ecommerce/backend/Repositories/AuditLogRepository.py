@@ -60,6 +60,38 @@ class AuditLogRepository:
         await self.db.refresh(audit_log)
         return audit_log
     
+    async def create_audit_log(self, log_data: dict) -> AuditLog:
+        """
+        Generic method to create an audit log entry.
+        
+        Args:
+            log_data: Dictionary with fields (actor_id, action, target_type, target_id, metadata)
+            
+        Returns:
+            AuditLog: Created audit log entry
+            
+        Side Effects:
+            - Creates permanent audit record
+            - Commits transaction immediately
+            
+        Immutability:
+            Audit logs cannot be updated or deleted (compliance requirement)
+        """
+        return self.create(log_data)
+    
+    async def get_by_id(self, log_id: int) -> AuditLog:
+        """
+        Retrieve an audit log entry by its ID.
+        
+        Args:
+            log_id: ID of the audit log entry
+            
+        Returns:
+            AuditLog: The retrieved audit log entry or None if not found
+        """
+        result = await self.db.execute(select(self.model).where(self.model.id == log_id))
+        return result.scalar_one_or_none()
+    
     async def get_by_target(self, target_type: str, target_id: int, limit: int = 50) -> List[AuditLog]:
         """
         Retrieve audit trail for a specific target entity.

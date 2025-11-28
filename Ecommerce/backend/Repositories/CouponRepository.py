@@ -4,6 +4,44 @@ from Models.Coupon import Coupon
 
 
 class CouponRepository:
+
+        async def create(self, coupon) -> Coupon:
+            """
+            Create a new coupon record in the database.
+            Args:
+                coupon: Coupon domain object
+            Returns:
+                Coupon: Created coupon with database-generated ID
+            """
+            db_coupon = self.model(
+                code=coupon.code,
+                description=coupon.description,
+                discount_type=coupon.discount_type,
+                discount_value_cents=coupon.discount_value_cents,
+                min_purchase_amount_cents=coupon.min_purchase_amount_cents,
+                max_discount_amount_cents=coupon.max_discount_amount_cents,
+                applicable_product_ids=coupon.applicable_product_ids,
+                applicable_category_ids=coupon.applicable_category_ids,
+                usage_limit=coupon.usage_limit,
+                usage_count=coupon.usage_count,
+                per_user_limit=coupon.per_user_limit,
+                is_active=coupon.is_active,
+                starts_at=coupon.starts_at,
+                expires_at=coupon.expires_at,
+                created_at=coupon.created_at,
+                updated_at=coupon.updated_at,
+                external_metadata=coupon.external_metadata,
+                promotion=getattr(coupon, 'promotion', False),
+                promotion_metadata=getattr(coupon, 'promotion_metadata', None)
+            )
+            self.db.add(db_coupon)
+            await self.db.commit()
+            await self.db.refresh(db_coupon)
+            return db_coupon
+
+        async def get_by_code(self, code: str) -> Coupon:
+            result = await self.db.execute(select(self.model).where(self.model.code == code))
+            return result.scalar_one_or_none()
     """
     Data access layer for Coupon entities.
     

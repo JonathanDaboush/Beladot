@@ -6,7 +6,7 @@ class AuditLog:
     
     This class captures who did what, when, and to which resource, providing a comprehensive
     audit trail for compliance, security investigations, and debugging. Records are immutable
-    once created and include contextual information like IP address and user agent.
+    once created and include contextual information like IP address.
     
     Key Responsibilities:
         - Record actor information (who performed the action)
@@ -19,7 +19,7 @@ class AuditLog:
         - Audit logs are immutable (no updates or deletes)
         - Sensitive data (passwords, tokens) should never be logged
         - PII requires access control (use include_sensitive flag)
-        - IP addresses and user agents are compliance-relevant
+        - IP addresses are compliance-relevant
     
     Compliance Features:
         - Immutable audit trail (GDPR, SOX, HIPAA requirements)
@@ -32,7 +32,7 @@ class AuditLog:
         - Sanitization performed at read time (not storage)
         - Repository should prevent updates/deletes
     """
-    def __init__(self, id, actor_id, actor_type, actor_email, action, target_type, target_id, item_metadata, ip_address, user_agent, created_at):
+    def __init__(self, id, actor_id, actor_type, actor_email, action, target_type, target_id, item_metadata, ip_address, created_at):
         """
         Initialize an AuditLog domain object.
         
@@ -46,7 +46,6 @@ class AuditLog:
             target_id: ID of the target resource
             item_metadata: Additional context as dictionary (e.g., {'reason': 'fraud'})
             ip_address: IP address of the actor
-            user_agent: Browser/client user agent string
             created_at: Timestamp when action occurred
         """
         self.id = id
@@ -58,7 +57,6 @@ class AuditLog:
         self.target_id = target_id
         self.item_metadata = item_metadata
         self.ip_address = ip_address
-        self.user_agent = user_agent
         self.created_at = created_at
     
     def to_dict(self, include_sensitive: bool = False) -> dict[str, Any]:
@@ -72,7 +70,7 @@ class AuditLog:
             dict: Audit log data with selective field inclusion:
                   - Always: id, actor_id, actor_type, action, target_type, 
                            target_id, created_at
-                  - Sensitive only: actor_email, ip_address, user_agent, 
+                  - Sensitive only: actor_email, ip_address, 
                                    full metadata
                   - Public: sanitized metadata (excludes password, token, key, secret)
                   
@@ -95,7 +93,6 @@ class AuditLog:
         if include_sensitive:
             result["actor_email"] = self.actor_email
             result["ip_address"] = self.ip_address
-            result["user_agent"] = self.user_agent
             result["metadata"] = self.item_metadata
         else:
             if self.item_metadata:

@@ -55,26 +55,3 @@ class APIKeyRepository:
         await self.db.commit()
         await self.db.refresh(api_key)
     
-    async def create_audit_log(self, log_data: dict) -> AuditLog:
-        """
-        Create an audit log entry for API key operations.
-        
-        Args:
-            log_data: Dictionary with audit log fields
-            
-        Returns:
-            AuditLog: Created audit log entry
-            
-        Side Effects:
-            - Creates immutable audit record
-            - Commits transaction immediately
-            
-        Use Cases:
-            - Key creation, revocation, scope changes
-            - Unauthorized access attempts
-        """
-        audit_log = AuditLog(**log_data)
-        self.db.add(audit_log)
-        await self.db.commit()
-        await self.db.refresh(audit_log)
-        return audit_log

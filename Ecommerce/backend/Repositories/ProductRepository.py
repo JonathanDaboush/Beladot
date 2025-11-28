@@ -5,6 +5,16 @@ from typing import List
 
 
 class ProductRepository:
+        async def get_variants_and_total_quantity(self, product_id: int):
+            """
+            Retrieve all variants for a given product_id and return both the list of variants and the total quantity.
+            Returns (variants_list, total_quantity)
+            """
+            from Models.ProductVariant import ProductVariant
+            result = await self.db.execute(select(ProductVariant).where(ProductVariant.product_id == product_id))
+            variants = result.scalars().all()
+            total_quantity = sum(v.stock_quantity for v in variants)
+            return variants, total_quantity
     """
     Data access layer for Product entities.
     

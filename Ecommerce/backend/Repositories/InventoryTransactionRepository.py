@@ -24,7 +24,7 @@ class InventoryTransactionRepository:
     
     Usage:
         repository = InventoryTransactionRepository(db_session)
-        transaction = await repository.create(transaction_obj)
+        transaction = await repository.create_transaction(transaction_obj)
         history = await repository.get_by_variant(variant_id)
     """
     
@@ -38,7 +38,7 @@ class InventoryTransactionRepository:
         self.db = db
         self.model = InventoryTransaction
     
-    async def create(self, transaction: InventoryTransaction) -> InventoryTransaction:
+    async def create_transaction(self, transaction: InventoryTransaction) -> InventoryTransaction:
         """
         Record an inventory transaction (immutable).
         
@@ -99,3 +99,16 @@ class InventoryTransactionRepository:
             .where(InventoryTransaction.transaction_type == transaction_type)
         )
         return result.scalars().all()
+
+    async def get_by_id(self, transaction_id: int) -> InventoryTransaction:
+        """
+        Get a transaction by its ID.
+        
+        Args:
+            transaction_id: The ID of the transaction to retrieve
+            
+        Returns:
+            InventoryTransaction: The transaction object or None
+        """
+        result = await self.db.execute(select(self.model).where(self.model.id == transaction_id))
+        return result.scalar_one_or_none()

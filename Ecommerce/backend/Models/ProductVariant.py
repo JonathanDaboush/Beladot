@@ -82,12 +82,7 @@ class ProductVariant(Base):
     inventory_management = Column(String(50), nullable=True)
     inventory_policy = Column(String(20), default="deny", nullable=False)
     track_stock = Column(Boolean, default=True, nullable=False)
-    option1_name = Column(String(50), nullable=True)
-    option1_value = Column(String(50), nullable=True)
-    option2_name = Column(String(50), nullable=True)
-    option2_value = Column(String(50), nullable=True)
-    option3_name = Column(String(50), nullable=True)
-    option3_value = Column(String(50), nullable=True)
+    # Option fields removed; now handled by OptionCategory/OptionValue
     
     product = relationship("Product", back_populates="variants")
     
@@ -99,9 +94,7 @@ class ProductVariant(Base):
         CheckConstraint("cost_cents IS NULL OR cost_cents >= 0", name='check_cost_non_negative'),
         CheckConstraint("stock_quantity >= 0", name='check_stock_non_negative'),
         CheckConstraint("inventory_policy IN ('deny', 'continue')", name='check_inventory_policy_valid'),
-        CheckConstraint("(option1_name IS NULL AND option1_value IS NULL) OR (option1_name IS NOT NULL AND option1_value IS NOT NULL)", name='check_option1_complete'),
-        CheckConstraint("(option2_name IS NULL AND option2_value IS NULL) OR (option2_name IS NOT NULL AND option2_value IS NOT NULL)", name='check_option2_complete'),
-        CheckConstraint("(option3_name IS NULL AND option3_value IS NULL) OR (option3_name IS NOT NULL AND option3_value IS NOT NULL)", name='check_option3_complete'),
+        # Option constraints removed; now handled by OptionCategory/OptionValue
     )
     
     def __repr__(self):

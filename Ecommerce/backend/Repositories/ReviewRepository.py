@@ -55,23 +55,3 @@ class ReviewRepository:
         await self.db.commit()
         await self.db.refresh(review)
     
-    async def create_audit_log(self, log_data: dict) -> AuditLog:
-        """
-        Create audit log for review moderation actions.
-        
-        Args:
-            log_data: Dictionary with audit log fields
-            
-        Returns:
-            AuditLog: Created audit log entry
-            
-        Use Cases:
-            - Review flagging/unflagging
-            - Moderation decisions
-            - User edits
-        """
-        audit_log = AuditLog(**log_data)
-        self.db.add(audit_log)
-        await self.db.commit()
-        await self.db.refresh(audit_log)
-        return audit_log

@@ -8,8 +8,8 @@ class RefundRepository:
     """
     Data access layer for Refund entities.
     
-    This repository handles database operations for refunds, supporting queries
-    by ID and by order, enabling refund tracking and management.
+    This repository handles creation and retrieval of refund records, supporting
+    queries by ID and by order, enabling refund tracking and management.
     
     Responsibilities:
         - CRUD operations for Refund entities
@@ -35,6 +35,44 @@ class RefundRepository:
         self.db = db
         self.model = Refund
     
+    async def create(self, refund: Refund) -> Refund:
+        """
+        Create a refund record.
+        
+        Args:
+            refund: Refund object to persist
+            
+        Returns:
+            Refund: Created refund with database-generated ID
+            
+        Side Effects:
+            - Commits transaction immediately
+            - Sets timestamps via database defaults
+        """
+        self.db.add(refund)
+        await self.db.commit()
+        await self.db.refresh(refund)
+        return refund
+    
+    async def create_refund(self, refund: Refund) -> Refund:
+        """
+        Create a refund record.
+        
+        Args:
+            refund: Refund object to persist
+            
+        Returns:
+            Refund: Created refund with database-generated ID
+            
+        Side Effects:
+            - Commits transaction immediately
+            - Sets timestamps via database defaults
+        """
+        self.db.add(refund)
+        await self.db.commit()
+        await self.db.refresh(refund)
+        return refund
+    
     async def get_by_id(self, refund_id: int) -> Refund:
         """
         Retrieve a refund by its unique identifier.
@@ -45,7 +83,7 @@ class RefundRepository:
         Returns:
             Refund: The refund object if found, None otherwise
         """
-        result = await self.db.execute(select(Refund).where(Refund.id == refund_id))
+        result = await self.db.execute(select(self.model).where(self.model.id == refund_id))
         return result.scalar_one_or_none()
     
     async def get_by_order(self, order_id: int) -> List[Refund]:
@@ -65,25 +103,6 @@ class RefundRepository:
             select(Refund).where(Refund.order_id == order_id)
         )
         return result.scalars().all()
-    
-    async def create(self, refund: Refund) -> Refund:
-        """
-        Create a new refund record in the database.
-        
-        Args:
-            refund: Refund object to persist
-            
-        Returns:
-            Refund: Created refund with database-generated ID
-            
-        Side Effects:
-            - Commits transaction immediately
-            - Sets timestamps via database defaults
-        """
-        self.db.add(refund)
-        await self.db.commit()
-        await self.db.refresh(refund)
-        return refund
     
     async def update(self, refund: Refund):
         """

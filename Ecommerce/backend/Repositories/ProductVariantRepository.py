@@ -68,30 +68,6 @@ class ProductVariantRepository:
         await self.db.commit()
         await self.db.refresh(variant)
     
-    async def create_transaction(self, transaction: InventoryTransaction) -> InventoryTransaction:
-        """
-        Create an inventory transaction (reservation, sale, restock).
-        
-        Args:
-            transaction: InventoryTransaction object to persist
-            
-        Returns:
-            InventoryTransaction: Created transaction with ID
-            
-        Side Effects:
-            - Records inventory change
-            - Commits transaction immediately
-            
-        Transaction Types:
-            - reservation: Temporary hold (order checkout)
-            - sale: Permanent reduction (order confirmed)
-            - restock: Inventory addition
-            - adjustment: Manual correction
-        """
-        self.db.add(transaction)
-        await self.db.commit()
-        await self.db.refresh(transaction)
-        return transaction
     
     async def get_active_reservations(self, variant_id: int) -> List[InventoryTransaction]:
         """

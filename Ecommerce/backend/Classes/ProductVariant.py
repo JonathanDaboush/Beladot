@@ -33,7 +33,7 @@ class ProductVariant:
         - cost_cents tracks COGS for margin analysis
         - This is a domain object; persistence handled by ProductVariantRepository
     """
-    def __init__(self, id, product_id, sku, name, price_cents, compare_at_price_cents, cost_cents, stock_quantity, inventory_management, inventory_policy, track_stock, option1_name, option1_value, option2_name, option2_value, option3_name, option3_value):
+    def __init__(self, id, product_id, sku, name, price_cents, compare_at_price_cents, cost_cents, stock_quantity, inventory_management, inventory_policy, track_stock):
         """
         Initialize a ProductVariant domain object.
         
@@ -49,12 +49,7 @@ class ProductVariant:
             inventory_management: Inventory system identifier (e.g., 'internal', 'shopify')
             inventory_policy: Policy for out-of-stock ('deny' or 'continue')
             track_stock: Whether to track inventory for this variant
-            option1_name: First option dimension name (e.g., 'Color')
-            option1_value: First option value (e.g., 'Blue')
-            option2_name: Second option dimension name (e.g., 'Size')
-            option2_value: Second option value (e.g., 'Large')
-            option3_name: Third option dimension name (e.g., 'Material')
-            option3_value: Third option value (e.g., 'Cotton')
+            
         """
         self.id = id
         self.product_id = product_id
@@ -67,12 +62,7 @@ class ProductVariant:
         self.inventory_management = inventory_management
         self.inventory_policy = inventory_policy
         self.track_stock = track_stock
-        self.option1_name = option1_name
-        self.option1_value = option1_value
-        self.option2_name = option2_name
-        self.option2_value = option2_value
-        self.option3_name = option3_name
-        self.option3_value = option3_value
+        # Option fields removed; now handled by OptionCategory/OptionValue
         self._reservations_cache = None
     
     def adjust_stock(self, delta: int, reason: str, actor_id: Optional[str], reference_id: Optional[str], repository):

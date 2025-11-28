@@ -53,3 +53,20 @@ class PaymentRepository:
         await self.db.merge(payment)
         await self.db.commit()
         await self.db.refresh(payment)
+
+    async def create(self, payment: Payment) -> Payment:
+        """
+        Create a payment record.
+        Args:
+            payment: Payment object to persist
+        Returns:
+            Payment: Created payment with database-generated ID
+        """
+        self.db.add(payment)
+        await self.db.commit()
+        await self.db.refresh(payment)
+        return payment
+
+    async def get_by_id(self, payment_id: int) -> Payment:
+        result = await self.db.execute(select(self.model).where(self.model.id == payment_id))
+        return result.scalar_one_or_none()

@@ -35,7 +35,7 @@ class Coupon:
         - For fixed: stored as cents (1500 = $15.00)
         - This is a domain object; persistence handled by CouponRepository
     """
-    def __init__(self, id, code, description, discount_type, discount_value_cents, min_purchase_amount_cents, max_discount_amount_cents, applicable_product_ids, applicable_category_ids, usage_limit, usage_count, per_user_limit, is_active, starts_at, expires_at, created_at, updated_at):
+    def __init__(self, id, code, description, discount_type, discount_value_cents, min_purchase_amount_cents, max_discount_amount_cents, applicable_product_ids, applicable_category_ids, usage_limit, usage_count, per_user_limit, is_active, starts_at, expires_at, created_at, updated_at, external_metadata=None, promotion=False, promotion_metadata=None):
         """
         Initialize a Coupon domain object.
         
@@ -57,6 +57,9 @@ class Coupon:
             expires_at: Expiration timestamp (None for no expiration)
             created_at: Coupon creation timestamp
             updated_at: Last modification timestamp
+            external_metadata: Dict or JSON with external coupon provider metadata (e.g., source, restrictions, provider info)
+            promotion: Boolean, True if this is an automatic promotion
+            promotion_metadata: Dict or JSON with promotion metadata (schedule, rules, targets, etc.)
         """
         self.id = id
         self.code = code
@@ -75,6 +78,9 @@ class Coupon:
         self.expires_at = expires_at
         self.created_at = created_at
         self.updated_at = updated_at
+        self.external_metadata = external_metadata
+        self.promotion = promotion
+        self.promotion_metadata = promotion_metadata
     
     def validate_for_cart(self, cart, user_id: Optional[str], user_usage_repository=None) -> dict[str, Any]:
         """

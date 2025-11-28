@@ -57,28 +57,3 @@ class ReturnRepository:
         await self.db.commit()
         await self.db.refresh(return_obj)
     
-    async def create_audit_log(self, log_data: dict) -> AuditLog:
-        audit_log = AuditLog(**log_data)
-        self.db.add(audit_log)
-        await self.db.commit()
-        await self.db.refresh(audit_log)
-        return audit_log
-    
-    async def create_refund(self, refund: Refund) -> Refund:
-        """
-        Create refund for an approved return.
-        
-        Args:
-            refund: Refund object to persist
-            
-        Returns:
-            Refund: Created refund with database-generated ID
-            
-        Side Effects:
-            - Links refund to return
-            - Commits transaction immediately
-        """
-        self.db.add(refund)
-        await self.db.commit()
-        await self.db.refresh(refund)
-        return refund
