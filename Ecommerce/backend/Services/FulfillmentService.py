@@ -24,6 +24,27 @@ class FulfillmentService:
         call carrier to create label, store label blob, and return a Shipment record with tracking.
         Must be idempotent and ensure labels are not double-created for the same items.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='create_shipment',
+            target_type='order',
+            target_id=str(order_id),
+            item_metadata={
+                'order_id': str(order_id),
+                'items': items,
+                'carrier': carrier
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass
     
     def track_shipment(self, shipment_id: UUID) -> dict:
@@ -31,6 +52,25 @@ class FulfillmentService:
         Query carrier APIs for current tracking state and return normalized tracking info.
         Cache results briefly to avoid excessive carrier API load.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='track_shipment',
+            target_type='shipment',
+            target_id=str(shipment_id),
+            item_metadata={
+                'shipment_id': str(shipment_id)
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass
     
     def handle_tracking_update(self, shipment_id: UUID, update: dict) -> None:
@@ -38,4 +78,24 @@ class FulfillmentService:
         Ingest webhook updates from carriers, update shipment status, notify customers,
         and forward to WebhookService or other integrations.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='handle_tracking_update',
+            target_type='shipment',
+            target_id=str(shipment_id),
+            item_metadata={
+                'shipment_id': str(shipment_id),
+                'update': update
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass

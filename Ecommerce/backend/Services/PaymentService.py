@@ -23,6 +23,28 @@ class PaymentService:
         to drive client-side flows for authentication.
         Persist initial Payment record with status='pending'.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='create_payment_intent',
+            target_type='order',
+            target_id=str(order_id),
+            item_metadata={
+                'order_id': str(order_id),
+                'amount_cents': amount_cents,
+                'currency': currency,
+                'method': method
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass
     
     def capture(self, payment_id: UUID, amount_cents: int | None = None) -> dict:
@@ -30,6 +52,26 @@ class PaymentService:
         Perform capture on an authorized intent. Return normalized response and update
         Payment persistence. Handle partial captures and idempotency.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='capture',
+            target_type='payment',
+            target_id=str(payment_id),
+            item_metadata={
+                'payment_id': str(payment_id),
+                'amount_cents': amount_cents
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass
     
     def refund(self, payment_id: UUID, amount_cents: int) -> dict:
@@ -37,6 +79,26 @@ class PaymentService:
         Request refund from gateway, persist Refund or Payment state changes,
         and return normalized response. Ensure safe retries and idempotency.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='refund',
+            target_type='payment',
+            target_id=str(payment_id),
+            item_metadata={
+                'payment_id': str(payment_id),
+                'amount_cents': amount_cents
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass
     
     def handle_webhook(self, gateway: str, payload: dict) -> None:
@@ -45,4 +107,24 @@ class PaymentService:
         (e.g., mark order paid on charge.succeeded).
         Ensure deduplication by event id and verify signatures.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='handle_webhook',
+            target_type='payment_gateway',
+            target_id=gateway,
+            item_metadata={
+                'gateway': gateway,
+                'payload': payload
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass

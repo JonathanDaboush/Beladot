@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Your Cart Summary</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        .container { max-width: 600px; margin: auto; padding: 24px; background: #f9f9f9; border-radius: 8px; }
+        h2 { color: #2a7ae2; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f1f1f1; }
+        .total { font-weight: bold; color: #2a7ae2; }
+        .footer { font-size: 0.95em; color: #888; margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Thank You for Shopping With Us!</h2>
+        <p>Dear {{first_name}},</p>
+        <p>We are delighted to provide you with a summary of your cart. Please review your selected items below:</p>
+        <table>
+            <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Subtotal</th>
+            </tr>
+            {{cart_rows}}
+        </table>
+        <p class="total">Total: {{total}}</p>
+        <p>Should you have any questions or need assistance, please do not hesitate to reach out. We are always here to help and ensure your experience is smooth and enjoyable.</p>
+        <p class="footer">With warm regards,<br>The Beladot Team</p>
+    </div>
+</body>
+</html>

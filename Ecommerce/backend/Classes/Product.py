@@ -32,7 +32,7 @@ class Product:
         - slug used for SEO-friendly URLs
         - This is a domain object; persistence handled by ProductRepository
     """
-    def __init__(self, id, name, description, short_description, slug, price_cents, compare_at_price_cents, cost_cents, sku, category_id, is_active, weight, dimensions, created_at, updated_at):
+    def __init__(self, id, name, description, short_description, slug, price_cents, compare_at_price_cents, cost_cents, sku, category_id, seller_id, is_active, weight, dimensions, created_at, updated_at):
         """
         Initialize a Product domain object.
         
@@ -48,6 +48,7 @@ class Product:
             sku: Stock Keeping Unit identifier
             stock_quantity: Available inventory count
             category_id: Foreign key to product category
+            seller_id: Foreign key to seller
             is_active: Whether product is visible to customers
             weight: Product weight (for shipping calculations)
             dimensions: Product dimensions dictionary (for shipping)
@@ -65,6 +66,7 @@ class Product:
         self.sku = sku
         # self.stock_quantity = stock_quantity  # REMOVED: stock is managed at variant level
         self.category_id = category_id
+        self.seller_id = seller_id
         self.is_active = is_active
         self.weight = weight
         self.dimensions = dimensions
@@ -209,6 +211,7 @@ class Product:
             # "stock_quantity": self.stock_quantity,  # REMOVED: stock is managed at variant level
             "is_active": self.is_active,
             "category_id": self.category_id,
+            "seller_id": self.seller_id,
             "default_variant_id": default_variant.id if default_variant else None,
             "primary_image_id": primary_image_id,
             "image_ids": image_ids,

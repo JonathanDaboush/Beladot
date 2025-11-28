@@ -220,16 +220,45 @@ class Return:
                 approved_at=None,
                 processed_at=None
             )
-            
             if repository:
                 refund = repository.create_refund(refund)
-            
             self.status = "completed"
             self.completed_at = datetime.now(timezone.utc)
-            
             if repository:
                 repository.update(self)
-            
+
+            # Send return confirmation email (idempotent)
+            if not hasattr(self, 'confirmation_email_sent') or not getattr(self, 'confirmation_email_sent', False):
+                # Fetch user (assume repository or order has user)
+                user = None
+                if hasattr(self, 'order') and hasattr(self.order, 'user'):
+                    user = self.order.user
+                elif hasattr(repository, 'get_user_for_order'):
+                    user = repository.get_user_for_order(self.order_id)
+                if user:
+                    # Prepare return rows for email
+                    return_rows = ""
+                    for item in self.return_items:
+                        return_rows += f"<tr><td>{item.get('product_name', '')} {item.get('variant_name', '')}</td><td>{item.get('quantity', 0)}</td><td>${item.get('unit_price_cents', 0)/100:.2f}</td><td>${item.get('unit_price_cents', 0)*item.get('quantity', 0)/100:.2f}</td></tr>"
+                    variables = {
+                        "first_name": getattr(user, 'first_name', 'Customer'),
+                        "return_rows": return_rows,
+                        "refund_total": f"${total_refund_cents/100:.2f}"
+                    }
+                    from Ecommerce.backend.Utilities.email import EmailService
+                    email_service = EmailService()
+                    to_email = getattr(user, 'email', None)
+                    if to_email:
+                        email_service.send_email(
+                            to_email=to_email,
+                            subject="Your Return Confirmation",
+                            html_content=email_service._render_template(
+                                email_service._load_template("return_confirmation"),
+                                variables
+                            )
+                        )
+                    setattr(self, 'confirmation_email_sent', True)
+                    if repository:
+                        repository.update(self)
             return refund
-        
         return None

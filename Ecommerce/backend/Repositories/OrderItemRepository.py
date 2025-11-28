@@ -5,6 +5,19 @@ from typing import List
 
 
 class OrderItemRepository:
+
+        async def get_by_orders_and_seller(self, order_ids: list, seller_id: int):
+            """
+            Get all order items for a list of orders and a seller.
+            """
+            from Models.Product import Product
+            result = await self.db.execute(
+                select(self.model).join(self.model.product).where(
+                    self.model.order_id.in_(order_ids),
+                    Product.seller_id == seller_id
+                )
+            )
+            return result.scalars().all()
     """
     Data access layer for OrderItem entities (order line items).
     

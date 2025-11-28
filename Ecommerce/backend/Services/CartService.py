@@ -31,6 +31,26 @@ class CartService:
             return None
         if user and session and user.id == session.user_id:
             cart=self.cart_repository.get_active_cart_by_user_id(user.id)
+            # Audit log
+            from datetime import datetime, timezone
+            from Ecommerce.backend.Repositories import AuditLogRepository
+            from Ecommerce.backend.Classes import AuditLog as auditLog
+            auditLog_entry = auditLog(
+                id=None,
+                actor_id=user.id if user else None,
+                actor_type='user',
+                actor_email=getattr(user, 'email', None) if user else None,
+                action='get_cart',
+                target_type='cart',
+                target_id=str(cart.id) if cart else None,
+                item_metadata={
+                    'user_id': str(user.id) if user else None,
+                    'session_id': session_id
+                },
+                ip_address=None,
+                created_at=datetime.now(timezone.utc)
+            )
+            AuditLogRepository.create(auditLog_entry)
             return cart
     
     def add_to_cart(self, cart_id: UUID, product_id: UUID, quantity: int, metadata: dict | None = None, ipAddress: str = "", user=None):
@@ -65,13 +85,14 @@ class CartService:
         cart._items.append(cart_item)
         # Persist cart update
         self.cart_repository.update(cart)
-        # Create audit log
+        # Audit log
         from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
         auditLog_entry = auditLog(
             id=None,
             actor_id=cart.user_id,
             actor_type='user',
-            actor_email=user.email,
+            actor_email=getattr(user, 'email', None) if user else None,
             action='add_to_cart',
             target_type='cart_item',
             target_id=str(cart_item.id),
@@ -109,6 +130,8 @@ class CartService:
             except Exception:
                 user_email = None
         from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
         auditLog_entry = auditLog(
             id=None,
             actor_id=cart.user_id,
@@ -125,9 +148,7 @@ class CartService:
             ip_address=ip_address,
             created_at=datetime.now(timezone.utc)
         )
-        # You may want to persist the audit log here, e.g.:
-        # from Ecommerce.backend.Repositories import AuditLogRepository
-        # AuditLogRepository.create(auditLog_entry)
+        AuditLogRepository.create(auditLog_entry)
         return cart_item
     
     def apply_coupon(self, cart_id: UUID, code: str) -> dict:
@@ -135,6 +156,27 @@ class CartService:
         Validate coupon through PromotionService and attach it to cart if valid
         (still not consuming uses_count). Return result {valid, discount_cents, message}.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        cart = self.cart_repository.get_by_id(cart_id)
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=getattr(cart, 'user_id', None),
+            actor_type='user',
+            actor_email=None,
+            action='apply_coupon',
+            target_type='cart',
+            target_id=str(cart_id),
+            item_metadata={
+                'cart_id': str(cart_id),
+                'code': code
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass
     
     def estimate_totals(self, cart_id: UUID, shipping_address=None) -> dict:
@@ -149,4 +191,24 @@ class CartService:
                 item.unit_price_cents * item.quantity
             })
         total=sum(i for i in totals)
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='estimate_totals',
+            target_type='cart',
+            target_id=str(cart_id),
+            item_metadata={
+                'cart_id': str(cart_id),
+                'total': total
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         return total

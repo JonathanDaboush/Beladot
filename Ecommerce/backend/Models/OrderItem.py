@@ -74,6 +74,7 @@ class OrderItem(Base):
     total_price_cents = Column(Integer, nullable=False)
     discount_cents = Column(Integer, default=0, nullable=False)
     tax_cents = Column(Integer, default=0, nullable=False)
+    paid_out = Column(Boolean, default=False, nullable=False, index=True)  # For seller payout tracking
     
     order = relationship("Order", back_populates="items")
     product = relationship("Product")

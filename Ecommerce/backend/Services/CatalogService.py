@@ -31,7 +31,14 @@ class CatalogService:
         category_obj = await self.category_repo.get_by_id(category_id)
         if not category_obj:
             raise ValueError('Category does not exist')
-        # Create product
+        # Require seller_id
+        seller_id = payload.get('seller_id')
+        if not seller_id:
+            raise ValueError('seller_id is required to create a product')
+        # Optionally: Validate seller exists (uncomment if needed)
+        # seller_obj = await self.seller_repo.get_by_id(seller_id)
+        # if not seller_obj:
+        #     raise ValueError('Seller does not exist')
         prod = product(**{k: v for k, v in payload.items() if k != 'variants' and k != 'images'})
         db_prod = await self.product_repo.create(prod)
         # Create default variant if none provided

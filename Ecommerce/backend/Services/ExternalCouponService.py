@@ -39,6 +39,25 @@ class ExternalCouponService:
             updated_at=now,
             external_metadata=external_metadata
         )
+        # Audit log
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='install_external_coupon',
+            target_type='coupon',
+            target_id=external_code,
+            item_metadata={
+                'external_code': external_code,
+                'external_metadata': external_metadata
+            },
+            ip_address=None,
+            created_at=now
+        )
+        AuditLogRepository.create(auditLog_entry)
         created = await self.coupon_repository.create(coupon)
         return created.id
 
@@ -47,4 +66,24 @@ class ExternalCouponService:
         Validate if an external coupon code exists and is active in the system.
         """
         coupon = await self.coupon_repository.get_by_code(code)
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='validate_external_coupon',
+            target_type='coupon',
+            target_id=code,
+            item_metadata={
+                'code': code,
+                'is_active': coupon.is_active if coupon else None
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         return coupon is not None and coupon.is_active

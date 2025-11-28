@@ -80,6 +80,7 @@ class User(Base):
     wishlist = relationship("Wishlist", back_populates="user", uselist=False, cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
+    seller_profile = relationship("Seller", back_populates="user", uselist=False, cascade="all, delete-orphan")
     
     # Constraints
     __table_args__ = (

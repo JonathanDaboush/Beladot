@@ -25,12 +25,53 @@ class NotificationService:
         Return job handle for tracking. Ensure template rendering is safe (escape input)
         and that sensitive information is not included.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='enqueue_email',
+            target_type='email',
+            target_id=to,
+            item_metadata={
+                'template': template,
+                'to': to,
+                'context': context
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass
     
     def send_sms(self, number: str, message: str):
         """
         Queue an outbound SMS job; validate number format.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='send_sms',
+            target_type='sms',
+            target_id=number,
+            item_metadata={
+                'number': number,
+                'message': message
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass
     
     def send_webhook(self, url: str, event: str, payload: dict):
@@ -38,4 +79,25 @@ class NotificationService:
         Queue webhooks with signature and retry metadata;
         provide admin insight into failures.
         """
+        # Audit log
+        from datetime import datetime, timezone
+        from Ecommerce.backend.Repositories import AuditLogRepository
+        from Ecommerce.backend.Classes import AuditLog as auditLog
+        auditLog_entry = auditLog(
+            id=None,
+            actor_id=None,
+            actor_type=None,
+            actor_email=None,
+            action='send_webhook',
+            target_type='webhook',
+            target_id=url,
+            item_metadata={
+                'url': url,
+                'event': event,
+                'payload': payload
+            },
+            ip_address=None,
+            created_at=datetime.now(timezone.utc)
+        )
+        AuditLogRepository.create(auditLog_entry)
         pass

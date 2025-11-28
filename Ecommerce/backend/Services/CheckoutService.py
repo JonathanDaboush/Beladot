@@ -50,7 +50,57 @@ class CheckoutService:
         This step should be safe to call repeatedly but perform idempotent behavior
         (not re-send duplicate emails).
         """
-        pass
+        # Fetch order and user
+        order = self.order_repository.get_by_id(order_id)
+        if not order:
+            raise ValueError("Order not found")
+
+        # Only send confirmation if order is paid and not already sent
+        if getattr(order, 'confirmation_email_sent', False):
+            return  # Idempotency: do not resend
+        if order.status not in ("paid", "completed", "processing", "shipped", "delivered"):
+            return  # Only send for paid or further states
+
+        # Fetch user (assume user repository or user object available)
+        user = getattr(order, 'user', None)
+        if not user:
+            if hasattr(self.order_repository, 'get_user_for_order'):
+                user = self.order_repository.get_user_for_order(order.id)
+            else:
+                raise ValueError("User not found for order")
+
+        # Prepare order rows for email
+        order_rows = ""
+        for item in getattr(order, 'items', []):
+            order_rows += f"<tr><td>{item.product_name} {item.variant_name or ''}</td><td>{item.quantity}</td><td>${item.unit_price_cents/100:.2f}</td><td>${item.total_price_cents/100:.2f}</td></tr>"
+
+        # Prepare variables for template
+        variables = {
+            "first_name": getattr(user, 'first_name', 'Customer'),
+            "order_rows": order_rows,
+            "total": f"${order.total_cents/100:.2f}"
+        }
+
+        # Send email
+        from Ecommerce.backend.Utilities.email import EmailService
+        email_service = EmailService()
+        to_email = getattr(user, 'email', None)
+        if to_email:
+            email_service.send_email(
+                to_email=to_email,
+                subject="Your Order Confirmation",
+                html_content=email_service._render_template(
+                    email_service._load_template("order_confirmation"),
+                    variables
+                )
+            )
+
+        # Mark as sent (persist if possible)
+        setattr(order, 'confirmation_email_sent', True)
+        if hasattr(self.order_repository, 'update'):
+            self.order_repository.update(order)
+
+        # Continue with fulfillment and analytics as needed
     
     def cancel_order(self, order_id: UUID, reason: str) -> bool:
         """

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Order Confirmation</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        .container { max-width: 600px; margin: auto; padding: 24px; background: #f9f9f9; border-radius: 8px; }
+        h2 { color: #2a7ae2; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 8px 12px; border-bottom: 1px solid #e0e0e0; }
+        th { background: #f1f1f1; }
+        .total { font-weight: bold; color: #2a7ae2; }
+        .footer { font-size: 0.95em; color: #888; margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Your Order is Confirmed!</h2>
+        <p>Dear {{first_name}},</p>
+        <p>Thank you for your purchase. We are pleased to confirm your order. Here are the details:</p>
+        <table>
+            <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Unit Price</th>
+                <th>Subtotal</th>
+            </tr>
+            {{order_rows}}
+        </table>
+        <p class="total">Order Total: {{total}}</p>
+        <p>We appreciate your trust in us. If you have any questions or need assistance, please feel free to contact us at any time.</p>
+        <p class="footer">With warm regards,<br>The Beladot Team</p>
+    </div>
+</body>
+</html>

@@ -7,6 +7,42 @@ from Models.AuditLog import AuditLog
 
 
 class OrderRepository:
+
+            async def get_orders_by_seller_and_status(self, seller_id: int, status: str, start_date, end_date):
+                """
+                Get all orders for a seller with a given status between two dates.
+                """
+                from Models.Product import Product
+                from Models.OrderItem import OrderItem
+                from sqlalchemy import and_
+                # Join Order, OrderItem, Product
+                result = await self.db.execute(
+                    select(self.model).join(self.model.items).join(OrderItem.product).where(
+                        Product.seller_id == seller_id,
+                        self.model.status == status,
+                        self.model.created_at >= start_date,
+                        self.model.created_at <= end_date
+                    ).distinct()
+                )
+                return result.scalars().all()
+
+            async def get_eligible_for_payout(self, seller_id: int, payout_date):
+                """
+                Get all delivered orders for a seller where the return window is closed (assume 30 days).
+                """
+                from Models.Product import Product
+                from Models.OrderItem import OrderItem
+                from sqlalchemy import and_
+                from datetime import timedelta
+                window_close_date = payout_date - timedelta(days=30)
+                result = await self.db.execute(
+                    select(self.model).join(self.model.items).join(OrderItem.product).where(
+                        Product.seller_id == seller_id,
+                        self.model.status == 'delivered',
+                        self.model.created_at <= window_close_date
+                    ).distinct()
+                )
+                return result.scalars().all()
         async def get_orders_by_user_id(self, user_id: int):
             """
             Fetch all orders for a given user ID.

@@ -100,6 +100,9 @@ class ProductRepository:
             - SKU already exists (unique constraint violation)
             - Validation constraints fail
         """
+        # Ensure seller_id is present
+        if not hasattr(product, 'seller_id') or product.seller_id is None:
+            raise ValueError('seller_id is required for product creation')
         self.db.add(product)
         await self.db.commit()
         await self.db.refresh(product)
@@ -119,17 +122,21 @@ class ProductRepository:
         Design:
             Uses merge() to handle detached objects safely
         """
+        # Ensure seller_id is present
+        if not hasattr(product, 'seller_id') or product.seller_id is None:
+            raise ValueError('seller_id is required for product update')
         await self.db.merge(product)
         await self.db.commit()
         await self.db.refresh(product)
     
-    async def get_all(self, limit: int = 100, offset: int = 0) -> List[Product]:
+    async def get_all(self, limit: int = 100, offset: int = 0, seller_id: int = None) -> List[Product]:
         """
         Retrieve paginated list of all products.
         
         Args:
             limit: Maximum number of products to return (default 100)
             offset: Number of products to skip (default 0)
+            seller_id: Optional seller_id to filter products by seller
             
         Returns:
             List[Product]: List of product objects
@@ -139,7 +146,9 @@ class ProductRepository:
             - offset enables pagination (page * limit)
             - No specific ordering (use application-level sorting)
         """
-        result = await self.db.execute(
-            select(Product).limit(limit).offset(offset)
-        )
+        query = select(Product)
+        if seller_id is not None:
+            query = query.where(Product.seller_id == seller_id)
+        query = query.limit(limit).offset(offset)
+        result = await self.db.execute(query)
         return result.scalars().all()

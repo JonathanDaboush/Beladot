@@ -54,6 +54,7 @@ class Product(Base):
     sku = Column(String(100), unique=True, nullable=False, index=True)
     stock_quantity = Column(Integer, default=0, nullable=False)
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True)
+    seller_id = Column(Integer, ForeignKey("sellers.id"), nullable=False, index=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     weight = Column(Integer, nullable=True)
     dimensions = Column(String(100), nullable=True)
@@ -61,6 +62,7 @@ class Product(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
     category = relationship("Category", back_populates="products")
+    seller = relationship("Seller", back_populates="products")
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
     variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")
     cart_items = relationship("CartItem", back_populates="product")

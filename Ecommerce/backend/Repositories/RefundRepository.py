@@ -5,6 +5,15 @@ from typing import List
 
 
 class RefundRepository:
+
+        async def get_refunded_item_ids(self, order_ids: list) -> set:
+            """
+            Get set of order_item_ids that have been refunded for given orders.
+            """
+            # This assumes refund reason or notes include order_item_id, or you have a mapping table.
+            # For now, this is a stub. You may need to extend Refund model to track refunded order_item_ids.
+            # Return empty set for now.
+            return set()
     """
     Data access layer for Refund entities.
     
