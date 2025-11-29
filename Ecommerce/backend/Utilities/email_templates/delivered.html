@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Package Delivered</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2196F3;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        .success-box {
+            background-color: white;
+            border: 2px solid #2196F3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .checkmark {
+            font-size: 60px;
+            color: #4CAF50;
+        }
+        .delivery-time {
+            font-size: 18px;
+            color: #666;
+            margin: 10px 0;
+        }
+        .proof-image {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .review-button {
+            display: inline-block;
+            background-color: #2196F3;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .label {
+            font-weight: bold;
+            color: #666;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✅ Package Delivered!</h1>
+    </div>
+    
+    <div class="content">
+        <p>Hi {{customer_name}},</p>
+        
+        <div class="success-box">
+            <div class="checkmark">✓</div>
+            <h2>Successfully Delivered</h2>
+            <div class="delivery-time">{{delivered_at}}</div>
+        </div>
+        
+        <h3>Delivery Details</h3>
+        <div class="info-row">
+            <span class="label">Order Number:</span>
+            <span>{{order_number}}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Delivered To:</span>
+            <span>{{delivered_to_name}}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Location:</span>
+            <span>{{delivery_location}}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">Tracking Number:</span>
+            <span>{{tracking_number}}</span>
+        </div>
+        
+        <h3>Proof of Delivery</h3>
+        <p>Signature:</p>
+        <img src="{{signature_url}}" alt="Delivery Signature" class="proof-image">
+        
+        <p>Photo:</p>
+        <img src="{{photo_url}}" alt="Delivery Photo" class="proof-image">
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <p><strong>How was your delivery experience?</strong></p>
+            <a href="{{review_url}}" class="review-button">Leave a Review</a>
+        </div>
+        
+        <h3>Didn't Receive Your Package?</h3>
+        <p>If you haven't received your order, please:</p>
+        <ul>
+            <li>Check with family members or neighbors</li>
+            <li>Look for the package in safe locations around your home</li>
+            <li>Contact us immediately if you can't find it</li>
+        </ul>
+        
+        <p>Thank you for shopping with us!</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated email. Please do not reply.</p>
+        <p>&copy; 2025 Your Store. All rights reserved.</p>
+    </div>
+</body>
+</html>

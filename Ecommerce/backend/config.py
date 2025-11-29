@@ -33,6 +33,51 @@ class Settings(BaseSettings):
     # Payment
     PAYMENT_GATEWAY_API_KEY: str = ""
     
+    # Shipping Carriers (PROOF OF CONCEPT - MOCK MODE)
+    # All carrier integrations are simulated - no real API calls are made
+    # This system tracks company deliveries/imports/exports internally
+    
+    # Purolator (MOCK)
+    PUROLATOR_API_KEY: str = "mock-key"
+    PUROLATOR_API_SECRET: str = "mock-secret"
+    PUROLATOR_ACCOUNT_NUMBER: str = "mock-account"
+    PUROLATOR_BASE_URL: str = "https://webservices.purolator.com/PWS/V2"
+    PUROLATOR_WEBHOOK_SECRET: str = "mock-webhook-secret"
+    
+    # FedEx (MOCK)
+    FEDEX_API_KEY: str = "mock-key"
+    FEDEX_SECRET_KEY: str = "mock-secret"
+    FEDEX_ACCOUNT_NUMBER: str = "mock-account"
+    FEDEX_METER_NUMBER: str = "mock-meter"
+    FEDEX_BASE_URL: str = "https://apis.fedex.com"
+    FEDEX_WEBHOOK_SECRET: str = "mock-webhook-secret"
+    
+    # DHL (MOCK)
+    DHL_API_KEY: str = "mock-key"
+    DHL_API_SECRET: str = "mock-secret"
+    DHL_ACCOUNT_NUMBER: str = "mock-account"
+    DHL_BASE_URL: str = "https://api.dhl.com"
+    DHL_WEBHOOK_SECRET: str = "mock-webhook-secret"
+    
+    # UPS (MOCK)
+    UPS_CLIENT_ID: str = "mock-client-id"
+    UPS_CLIENT_SECRET: str = "mock-secret"
+    UPS_ACCOUNT_NUMBER: str = "mock-account"
+    UPS_BASE_URL: str = "https://onlinetools.ups.com/api"
+    UPS_WEBHOOK_SECRET: str = "mock-webhook-secret"
+    
+    # Canada Post (MOCK)
+    CANADAPOST_API_KEY: str = "mock-key"
+    CANADAPOST_API_SECRET: str = "mock-secret"
+    CANADAPOST_CUSTOMER_NUMBER: str = "mock-customer"
+    CANADAPOST_BASE_URL: str = "https://ct.soa-gw.canadapost.ca"
+    
+    # Shipping Configuration
+    MOCK_MODE: bool = True  # Simulate carrier responses without API calls
+    DEFAULT_CARRIER: str = "purolator"
+    ENABLE_CARRIER_RATE_SHOPPING: bool = True
+    TRACKING_SYNC_INTERVAL_MINUTES: int = 15
+    
     # AWS S3 (optional)
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""

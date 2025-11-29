@@ -372,3 +372,181 @@ class EmailService:
         })
         subject = "Reset Your Password"
         return self.send_email(to_email, subject, html_content)
+    
+    def send_order_shipped(self, to_email: str, customer_name: str, order_number: str, tracking_number: str, carrier_name: str, service_level: str, tracking_url: str, estimated_delivery: str, shipping_address: str) -> bool:
+        """
+        Send shipment confirmation with tracking information.
+        
+        Sent when carrier picks up the package and shipment is created.
+        
+        Args:
+            to_email: Customer email
+            customer_name: Customer's name
+            order_number: Order ID
+            tracking_number: Carrier's tracking number
+            carrier_name: "Purolator", "FedEx", "DHL", etc.
+            service_level: "Express", "Ground", "Overnight"
+            tracking_url: Direct link to carrier's tracking page
+            estimated_delivery: "Nov 30, 2025 by 5:00 PM"
+            shipping_address: Full delivery address
+        
+        Business Logic:
+            - Sent after create_shipment() succeeds
+            - Highest open rate of all transactional emails (~70%)
+            - Include tracking link (don't make customer search)
+            - Set delivery expectations (reduce "where's my order?" inquiries)
+        """
+        template = self._load_template("order_shipped")
+        html_content = self._render_template(template, {
+            "customer_name": customer_name,
+            "order_number": order_number,
+            "tracking_number": tracking_number,
+            "carrier_name": carrier_name,
+            "service_level": service_level,
+            "tracking_url": tracking_url,
+            "estimated_delivery": estimated_delivery,
+            "shipping_address": shipping_address
+        })
+        subject = f"Your Order #{order_number} Has Shipped!"
+        return self.send_email(to_email, subject, html_content)
+    
+    def send_out_for_delivery(self, to_email: str, customer_name: str, order_number: str, tracking_number: str, tracking_url: str, delivery_time: str, driver_name: str, delivery_instructions: str, carrier_name: str) -> bool:
+        """
+        Send out-for-delivery notification (same-day alert).
+        
+        Sent when package is loaded on delivery vehicle for final mile delivery.
+        
+        Args:
+            delivery_time: "By 5:00 PM today"
+            driver_name: "John" or "Your driver"
+            delivery_instructions: Customer's saved instructions
+        
+        Business Logic:
+            - Sent morning of delivery day (triggered by carrier webhook)
+            - High urgency - customer needs to be home
+            - Include option to leave without signature
+            - Reduce missed deliveries
+        """
+        template = self._load_template("out_for_delivery")
+        html_content = self._render_template(template, {
+            "customer_name": customer_name,
+            "order_number": order_number,
+            "tracking_number": tracking_number,
+            "tracking_url": tracking_url,
+            "delivery_time": delivery_time,
+            "driver_name": driver_name,
+            "delivery_instructions": delivery_instructions,
+            "carrier_name": carrier_name
+        })
+        subject = f"Order #{order_number} - Out for Delivery Today!"
+        return self.send_email(to_email, subject, html_content)
+    
+    def send_delivered(self, to_email: str, customer_name: str, order_number: str, tracking_number: str, delivered_at: str, delivered_to_name: str, delivery_location: str, signature_url: str, photo_url: str, review_url: str) -> bool:
+        """
+        Send delivery confirmation with proof.
+        
+        Sent when carrier confirms successful delivery.
+        
+        Args:
+            delivered_at: "Nov 28, 2025 at 2:35 PM"
+            delivered_to_name: Person who signed
+            delivery_location: "Front door", "Mailroom", etc.
+            signature_url: Image URL from carrier API
+            photo_url: Doorstep photo from carrier
+            review_url: Link to product review page
+        
+        Business Logic:
+            - Final email in delivery lifecycle
+            - Include proof of delivery (signature/photo)
+            - Request product review (high conversion timing)
+            - Reduce "where's my order?" inquiries
+        """
+        template = self._load_template("delivered")
+        html_content = self._render_template(template, {
+            "customer_name": customer_name,
+            "order_number": order_number,
+            "tracking_number": tracking_number,
+            "delivered_at": delivered_at,
+            "delivered_to_name": delivered_to_name,
+            "delivery_location": delivery_location,
+            "signature_url": signature_url,
+            "photo_url": photo_url,
+            "review_url": review_url
+        })
+        subject = f"Order #{order_number} - Delivered!"
+        return self.send_email(to_email, subject, html_content)
+    
+    def send_delivery_failed(self, to_email: str, customer_name: str, order_number: str, tracking_number: str, failure_reason: str, attempt_date: str, reschedule_url: str, carrier_name: str, pickup_location: str, available_date: str, remaining_attempts: int, days_until_return: int) -> bool:
+        """
+        Send failed delivery notification with recovery options.
+        
+        Sent when delivery attempt fails (customer not home, address issue, etc.).
+        
+        Args:
+            failure_reason: "No one available to receive", "Address not found"
+            attempt_date: "Nov 28, 2025 at 3:15 PM"
+            reschedule_url: Link to carrier's redelivery page
+            pickup_location: Nearest carrier location address
+            available_date: "Nov 29, 2025"
+            remaining_attempts: 2
+            days_until_return: 5 (before package returned to sender)
+        
+        Business Logic:
+            - Urgent action required
+            - Multiple recovery options (reschedule, pickup, authorize release)
+            - Time pressure (limited attempts)
+            - Prevent return to sender
+        """
+        template = self._load_template("delivery_failed")
+        html_content = self._render_template(template, {
+            "customer_name": customer_name,
+            "order_number": order_number,
+            "tracking_number": tracking_number,
+            "failure_reason": failure_reason,
+            "attempt_date": attempt_date,
+            "reschedule_url": reschedule_url,
+            "carrier_name": carrier_name,
+            "pickup_location": pickup_location,
+            "available_date": available_date,
+            "remaining_attempts": remaining_attempts,
+            "days_until_return": days_until_return
+        })
+        subject = f"Action Required - Delivery Attempt Failed for Order #{order_number}"
+        return self.send_email(to_email, subject, html_content)
+    
+    def send_return_label(self, to_email: str, customer_name: str, order_number: str, return_id: str, tracking_number: str, label_url: str, tracking_url: str, carrier_name: str, dropoff_locations: str, refund_days: int, returned_items: str, refund_amount: str) -> bool:
+        """
+        Send return shipping label to customer.
+        
+        Sent after return request is approved.
+        
+        Args:
+            return_id: Internal return ID
+            label_url: PDF return label download link
+            dropoff_locations: List of carrier drop-off points
+            refund_days: 3-7 business days after receipt
+            returned_items: List of items being returned
+            refund_amount: "$125.99"
+        
+        Business Logic:
+            - Include detailed packing instructions
+            - Prepaid label (you pay shipping)
+            - Set refund expectations
+            - Track return shipment
+        """
+        template = self._load_template("return_label_ready")
+        html_content = self._render_template(template, {
+            "customer_name": customer_name,
+            "order_number": order_number,
+            "return_id": return_id,
+            "tracking_number": tracking_number,
+            "label_url": label_url,
+            "tracking_url": tracking_url,
+            "carrier_name": carrier_name,
+            "dropoff_locations": dropoff_locations,
+            "refund_days": refund_days,
+            "returned_items": returned_items,
+            "refund_amount": refund_amount
+        })
+        subject = f"Return Label Ready for Order #{order_number}"
+        return self.send_email(to_email, subject, html_content)

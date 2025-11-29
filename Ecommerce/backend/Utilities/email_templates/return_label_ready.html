@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Return Label Ready</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #9C27B0;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        .label-box {
+            background-color: white;
+            border: 2px solid #9C27B0;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .download-button {
+            display: inline-block;
+            background-color: #9C27B0;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .steps {
+            background-color: white;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .step {
+            padding: 15px;
+            border-left: 4px solid #9C27B0;
+            margin-bottom: 15px;
+            background-color: #f5f5f5;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 Your Return Label is Ready</h1>
+    </div>
+    
+    <div class="content">
+        <p>Hi {{customer_name}},</p>
+        
+        <p>Your return request for order <strong>{{order_number}}</strong> has been approved. Your prepaid return shipping label is attached.</p>
+        
+        <div class="label-box">
+            <h3>Return Label Information</h3>
+            <p><strong>Return ID:</strong> {{return_id}}</p>
+            <p><strong>Tracking Number:</strong> {{tracking_number}}</p>
+            <a href="{{label_url}}" class="download-button">Download Return Label</a>
+        </div>
+        
+        <h3>How to Return Your Item</h3>
+        <div class="steps">
+            <div class="step">
+                <strong>Step 1: Print the Label</strong><br>
+                Download and print the return label on standard 8.5" x 11" paper.
+            </div>
+            <div class="step">
+                <strong>Step 2: Pack Your Item</strong><br>
+                Securely pack the item in its original packaging if possible. Include all accessories and documentation.
+            </div>
+            <div class="step">
+                <strong>Step 3: Attach the Label</strong><br>
+                Remove or cover the original shipping label. Affix the return label clearly on the outside of the package.
+            </div>
+            <div class="step">
+                <strong>Step 4: Drop Off</strong><br>
+                Take your package to any {{carrier_name}} location or schedule a pickup:<br>
+                {{dropoff_locations}}
+            </div>
+        </div>
+        
+        <h3>Important Information</h3>
+        <ul>
+            <li>No payment required - return shipping is prepaid</li>
+            <li>Keep your receipt from the carrier as proof of return</li>
+            <li>Track your return at: <a href="{{tracking_url}}">{{tracking_url}}</a></li>
+            <li>Refund will be processed within {{refund_days}} business days after we receive the item</li>
+        </ul>
+        
+        <h3>Items Being Returned</h3>
+        <p>{{returned_items}}</p>
+        
+        <h3>Expected Refund</h3>
+        <p><strong>Amount:</strong> {{refund_amount}}</p>
+        <p><strong>Method:</strong> Original payment method</p>
+        
+        <p>Thank you for your business. We appreciate your patience with the return process.</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated email. Please do not reply.</p>
+        <p>&copy; 2025 Your Store. All rights reserved.</p>
+    </div>
+</body>
+</html>

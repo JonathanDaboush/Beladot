@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Out for Delivery Today</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #FF9800;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        .delivery-box {
+            background-color: white;
+            border: 2px solid #FF9800;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .delivery-time {
+            font-size: 28px;
+            font-weight: bold;
+            color: #FF9800;
+            margin: 10px 0;
+        }
+        .track-button {
+            display: inline-block;
+            background-color: #FF9800;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .alert-box {
+            background-color: #FFF3CD;
+            border-left: 4px solid #FF9800;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚚 Out for Delivery Today!</h1>
+    </div>
+    
+    <div class="content">
+        <p>Hi {{customer_name}},</p>
+        
+        <p>Your order <strong>{{order_number}}</strong> is on the delivery vehicle and will arrive today!</p>
+        
+        <div class="delivery-box">
+            <div>Expected Delivery Time</div>
+            <div class="delivery-time">{{delivery_time}}</div>
+            <p>{{driver_name}} will deliver your package</p>
+            <a href="{{tracking_url}}" class="track-button">Track Live Location</a>
+        </div>
+        
+        <div class="alert-box">
+            <strong>⚠️ Please be available to receive your package</strong><br>
+            A signature may be required depending on the shipment value.
+        </div>
+        
+        <h3>Delivery Instructions</h3>
+        <p>{{delivery_instructions}}</p>
+        
+        <h3>Can't be home?</h3>
+        <ul>
+            <li>Leave delivery instructions via the tracking link</li>
+            <li>Authorize delivery without signature (if available)</li>
+            <li>Reschedule delivery for another day</li>
+            <li>Pick up at nearest {{carrier_name}} location</li>
+        </ul>
+        
+        <p>Thank you for your patience!</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated email. Please do not reply.</p>
+        <p>&copy; 2025 Your Store. All rights reserved.</p>
+    </div>
+</body>
+</html>
