@@ -138,7 +138,7 @@ class ProductFeed(Base):
     filename = Column(String(255), nullable=False)
     feed_type = Column(String(50), nullable=False, index=True)
     format = Column(String(20), nullable=False)
-    status = Column(SQLEnum(FeedStatus), default=FeedStatus.PENDING, nullable=False, index=True)
+    status = Column(SQLEnum(FeedStatus, values_callable=lambda x: [e.value for e in x]), default=FeedStatus.PENDING, nullable=False, index=True)
     total_rows = Column(Integer, default=0, nullable=False)
     processed_rows = Column(Integer, default=0, nullable=False)
     success_rows = Column(Integer, default=0, nullable=False)

@@ -86,6 +86,10 @@ def hash_password_bcrypt(password: str) -> str:
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     return hashed.decode('utf-8')
 
+def check_password_hash(hashed: str, password: str) -> bool:
+    """Alias for verify_password_bcrypt with swapped parameter order for compatibility."""
+    return verify_password_bcrypt(password, hashed)
+
 def verify_password_bcrypt(password: str, hashed: str) -> bool:
     """
     Verify a plain-text password against a bcrypt hash (constant-time comparison).

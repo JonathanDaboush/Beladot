@@ -50,7 +50,5 @@ class Address(Base):
         CheckConstraint("length(trim(postal_code)) > 0", name='check_postal_code_present'),
         CheckConstraint("length(trim(city)) > 0", name='check_city_present'),
         CheckConstraint("length(trim(address_line1)) > 0", name='check_line1_present'),
-        UniqueConstraint('user_id', 'is_default', 
-                        name='unique_default_per_user',
-                        postgresql_where="is_default = true"),
+        # Removed postgresql_where for compatibility - unique constraint will be enforced at application level
     )

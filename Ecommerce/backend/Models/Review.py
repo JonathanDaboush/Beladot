@@ -88,7 +88,7 @@ class Review(Base):
     title = Column(String(255), nullable=True)
     comment = Column(Text, nullable=True)
     is_verified_purchase = Column(Boolean, default=False, nullable=False, index=True)
-    status = Column(SQLEnum(ReviewStatus), default=ReviewStatus.PENDING, nullable=False, index=True)
+    status = Column(SQLEnum(ReviewStatus, values_callable=lambda x: [e.value for e in x]), default=ReviewStatus.PENDING, nullable=False, index=True)
     moderation_notes = Column(Text, nullable=True)
     toxicity_score = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)

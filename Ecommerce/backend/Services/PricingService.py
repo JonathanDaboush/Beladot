@@ -64,7 +64,7 @@ class PricingService:
     Computes per-line pricing considering promotions and tax using regional rules.
     """
     
-    def __init__(self, product_repository, promotion_service, tax_provider=None):
+    def __init__(self, product_repository, promotion_service=None, tax_provider=None):
         self.product_repository = product_repository
         self.promotion_service = promotion_service
         self.tax_provider = tax_provider

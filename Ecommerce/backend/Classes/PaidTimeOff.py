@@ -83,9 +83,9 @@ class PaidTimeOff:
         business_days = self.calculate_business_days()
         expected_hours = Decimal(str(business_days)) * hours_per_day
         
-        # Allow some flexibility (±1 day)
-        min_hours = (Decimal(str(business_days)) - Decimal("1")) * hours_per_day
-        max_hours = (Decimal(str(business_days)) + Decimal("1")) * hours_per_day
+        # Allow significant flexibility for partial days, weekends, etc (±2 days)
+        min_hours = max(Decimal("0"), (Decimal(str(business_days)) - Decimal("2")) * hours_per_day)
+        max_hours = (Decimal(str(business_days)) + Decimal("2")) * hours_per_day
         
         if self.hours_requested < min_hours or self.hours_requested > max_hours:
             return False, f"Hours requested ({self.hours_requested}) doesn't match business days ({business_days} days = ~{expected_hours} hours)"

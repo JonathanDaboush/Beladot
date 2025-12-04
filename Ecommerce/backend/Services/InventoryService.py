@@ -1,8 +1,10 @@
 from typing import Any
 from uuid import UUID
 
-from Ecommerce.backend.Classes import ProductVariant as productvariant, InventoryTransaction as inventorytransaction
-from Ecommerce.backend.Repositories import ProductVariantRepository as productvariantrepository, InventoryTransactionRepository as inventorytransactionrepository
+from Models.ProductVariant import ProductVariant
+from Models.InventoryTransaction import InventoryTransaction
+from Repositories.ProductVariantRepository import ProductVariantRepository
+from Repositories.InventoryTransactionRepository import InventoryTransactionRepository
 
 class InventoryService:
     """

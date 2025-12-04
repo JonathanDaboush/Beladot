@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, Date, Enum, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Date, Enum, DateTime, Boolean, Numeric
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, date
 import enum
 from database import Base
 
@@ -44,7 +44,7 @@ class Employee(Base):
     employment_status = Column(Enum(EmploymentStatus), nullable=False, default=EmploymentStatus.ACTIVE)
     
     # Dates
-    hire_date = Column(Date, nullable=False)
+    hire_date = Column(Date, nullable=False, default=date.today)
     termination_date = Column(Date, nullable=True)
     
     # Location Information
@@ -56,6 +56,10 @@ class Employee(Base):
     
     # Manager/Reporting
     manager_id = Column(Integer, nullable=True)  # ID of manager employee
+    
+    # Leave Balances (hours)
+    pto_balance = Column(Numeric(7, 2), default=0.0, nullable=False)
+    sick_balance = Column(Numeric(7, 2), default=0.0, nullable=False)
     
     # Audit Fields
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

@@ -47,7 +47,7 @@ class TimeOffRequest(Base):
     paid_sick_id = Column(Integer, ForeignKey("paid_sick.id"), nullable=True)  # If paid sick
     
     # Request details
-    time_off_type = Column(SQLEnum(TimeOffType), nullable=False)
+    time_off_type = Column(SQLEnum(TimeOffType, values_callable=lambda x: [e.value for e in x]), nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     total_days = Column(Numeric(5, 2), nullable=False)
@@ -55,7 +55,7 @@ class TimeOffRequest(Base):
     partial_hours = Column(Numeric(5, 2), nullable=True)
     
     # Status
-    status = Column(SQLEnum(TimeOffStatus), nullable=False, default=TimeOffStatus.PENDING)
+    status = Column(SQLEnum(TimeOffStatus, values_callable=lambda x: [e.value for e in x]), nullable=False, default=TimeOffStatus.PENDING)
     reviewed_at = Column(DateTime, nullable=True)
     denial_reason = Column(String(500), nullable=True)
     
@@ -72,7 +72,7 @@ class TimeOffRequest(Base):
     updated_at = Column(DateTime, nullable=False)
     
     # Relationships
-    employee = relationship("Employee", foreign_keys=[employee_id], back_populates="time_off_requests")
+    employee = relationship("Employee", foreign_keys=[employee_id])
     reviewer = relationship("Employee", foreign_keys=[reviewed_by])
     paid_pto = relationship("PaidTimeOff", foreign_keys=[paid_time_off_id])
     paid_sick = relationship("PaidSick", foreign_keys=[paid_sick_id])

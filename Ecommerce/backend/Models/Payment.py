@@ -94,8 +94,8 @@ class Payment(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
     amount_cents = Column(Integer, nullable=False)
-    method = Column(SQLEnum(PaymentMethod), nullable=False)
-    status = Column(SQLEnum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False, index=True)
+    method = Column(String(50), nullable=True)  # Payment method as string
+    status = Column(SQLEnum(PaymentStatus, values_callable=lambda x: [e.value for e in x]), default=PaymentStatus.PENDING, nullable=False, index=True)
     transaction_id = Column(String(255), nullable=True, index=True)
     raw_response = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)

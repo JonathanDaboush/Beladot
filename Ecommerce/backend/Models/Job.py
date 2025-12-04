@@ -112,7 +112,7 @@ class Job(Base):
     idempotency_key = Column(String(255), nullable=True, unique=True, index=True)
     payload = Column(JSON, nullable=False)
     result = Column(JSON, nullable=True)
-    status = Column(SQLEnum(JobStatus), default=JobStatus.QUEUED, nullable=False, index=True)
+    status = Column(SQLEnum(JobStatus, values_callable=lambda x: [e.value for e in x]), default=JobStatus.QUEUED, nullable=False, index=True)
     worker_id = Column(String(100), nullable=True)
     attempts = Column(Integer, default=0, nullable=False)
     max_attempts = Column(Integer, default=3, nullable=False)

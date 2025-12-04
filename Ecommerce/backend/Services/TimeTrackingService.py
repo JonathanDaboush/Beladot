@@ -63,7 +63,7 @@ class TimeTrackingService:
         hours = await self.hours_repo.get_by_employee_and_date(employee_id, today)
         
         if not hours:
-            raise ValueError(f"No clock-in found for employee {employee_id} today")
+            raise ValueError(f"Employee {employee_id} not clocked in")
         
         if hours.clock_out:
             raise ValueError(f"Employee {employee_id} already clocked out")
@@ -79,11 +79,14 @@ class TimeTrackingService:
             clock_out=hours.clock_out
         )
         
+        # Calculate total hours from clock times
+        total_from_clock = hours_class.calculate_hours_from_clock_times()
+        
         # Split into regular and overtime
         hour_split = hours_class.split_regular_and_overtime()
         hours.regular_hours = hour_split["regular_hours"]
         hours.overtime_hours = hour_split["overtime_hours"]
-        hours.total_hours = hours_class.calculate_total_hours()
+        hours.total_hours = total_from_clock
         
         result = await self.hours_repo.update(hours)
         logger.info(f"Employee {employee_id} clocked out at {result.clock_out}. Total: {result.total_hours}h")
@@ -148,6 +151,175 @@ class TimeTrackingService:
         logger.info(f"Hours {hours_id} approved by employee {approved_by}")
         return result
     
+    async def reject_hours(
+        self,
+        hours_id: int,
+        rejected_by: int,
+        reason: str = None
+    ) -> HoursWorked:
+        """Reject hours worked entry."""
+        hours = await self.hours_repo.get_by_id(hours_id)
+        if not hours:
+            raise ValueError(f"Hours entry {hours_id} not found")
+        
+        if hours.is_approved:
+            raise ValueError(f"Cannot reject already approved hours")
+        
+        # Mark as not approved and add rejection reason to notes
+        hours.is_approved = False
+        hours.approved_by = rejected_by
+        hours.approved_at = datetime.now()
+        if reason:
+            hours.notes = f"REJECTED: {reason}" + (f" | Previous notes: {hours.notes}" if hours.notes else "")
+        
+        result = await self.hours_repo.update(hours)
+        logger.info(f"Hours {hours_id} rejected by employee {rejected_by}")
+        return result
+    
+    async def calculate_hours_worked(
+        self,
+        employee_id: int,
+        start_date: date,
+        end_date: date
+    ) -> Dict:
+        """Calculate total hours worked for a date range."""
+        result = await self.hours_repo.calculate_total_hours(employee_id, start_date, end_date)
+        return result
+    
+    async def calculate_hours(self, hours_id: int) -> HoursWorked:
+        """Calculate hours for a specific hours record from clock times."""
+        hours = await self.hours_repo.get_by_id(hours_id)
+        if not hours:
+            raise ValueError(f"Hours entry {hours_id} not found")
+        
+        if not hours.clock_in or not hours.clock_out:
+            raise ValueError("Cannot calculate hours without clock in and clock out times")
+        
+        # Calculate using business logic
+        hours_class = HoursWorkedClass(
+            employee_id=hours.employee_id,
+            work_date=hours.work_date,
+            clock_in=hours.clock_in,
+            clock_out=hours.clock_out
+        )
+        
+        # Calculate total hours from clock times
+        total_from_clock = hours_class.calculate_hours_from_clock_times()
+        
+        # Split into regular and overtime
+        hour_split = hours_class.split_regular_and_overtime()
+        hours.regular_hours = hour_split["regular_hours"]
+        hours.overtime_hours = hour_split["overtime_hours"]
+        hours.total_hours = total_from_clock
+        
+        result = await self.hours_repo.update(hours)
+        logger.info(f"Calculated hours for entry {hours_id}: {result.total_hours}h")
+        return result
+    
+    async def edit_hours(
+        self,
+        hours_id: int,
+        clock_in: datetime = None,
+        clock_out: datetime = None,
+        regular_hours: float = None,
+        overtime_hours: float = None,
+        notes: str = None
+    ) -> HoursWorked:
+        """Edit hours entry (only allowed before approval)."""
+        hours = await self.hours_repo.get_by_id(hours_id)
+        if not hours:
+            raise ValueError(f"Hours entry {hours_id} not found")
+        
+        if hours.is_approved:
+            raise ValueError("Cannot edit approved hours")
+        
+        # Update fields
+        if clock_in is not None:
+            hours.clock_in = clock_in
+        if clock_out is not None:
+            hours.clock_out = clock_out
+        if regular_hours is not None:
+            hours.regular_hours = Decimal(str(regular_hours))
+        if overtime_hours is not None:
+            hours.overtime_hours = Decimal(str(overtime_hours))
+        if notes is not None:
+            hours.notes = notes
+        
+        # Recalculate total if clock times changed
+        if clock_in or clock_out:
+            if hours.clock_in and hours.clock_out:
+                hours_class = HoursWorkedClass(
+                    employee_id=hours.employee_id,
+                    work_date=hours.work_date,
+                    clock_in=hours.clock_in,
+                    clock_out=hours.clock_out
+                )
+                total_from_clock = hours_class.calculate_hours_from_clock_times()
+                hour_split = hours_class.split_regular_and_overtime()
+                hours.regular_hours = hour_split["regular_hours"]
+                hours.overtime_hours = hour_split["overtime_hours"]
+                hours.total_hours = total_from_clock
+        elif regular_hours is not None or overtime_hours is not None:
+            hours.total_hours = hours.regular_hours + hours.overtime_hours
+        
+        result = await self.hours_repo.update(hours)
+        logger.info(f"Hours {hours_id} edited")
+        return result
+    
+    async def add_break_time(
+        self,
+        hours_id: int,
+        break_minutes: int
+    ) -> HoursWorked:
+        """Add break time to deduct from total hours."""
+        hours = await self.hours_repo.get_by_id(hours_id)
+        if not hours:
+            raise ValueError(f"Hours entry {hours_id} not found")
+        
+        # Store the break time in minutes
+        hours.unpaid_break_minutes = (hours.unpaid_break_minutes or 0) + break_minutes
+        
+        # Deduct break time from total hours
+        break_hours = Decimal(str(break_minutes)) / Decimal("60")
+        hours.total_hours = max(Decimal("0"), hours.total_hours - break_hours)
+        
+        # Adjust regular hours if needed
+        if hours.regular_hours > hours.total_hours:
+            hours.regular_hours = hours.total_hours
+            hours.overtime_hours = Decimal("0")
+        
+        result = await self.hours_repo.update(hours)
+        logger.info(f"Added {break_minutes} min break to hours {hours_id}")
+        return result
+    
+    async def batch_approve_hours(
+        self,
+        hours_ids: List[int],
+        approved_by: int
+    ) -> List[Dict]:
+        """Approve multiple hours entries at once."""
+        results = []
+        
+        for hours_id in hours_ids:
+            try:
+                hours = await self.approve_hours(hours_id, approved_by)
+                results.append({
+                    "hours_id": hours_id,
+                    "employee_id": hours.employee_id,
+                    "total_hours": float(hours.total_hours),
+                    "status": "approved"
+                })
+            except Exception as e:
+                logger.error(f"Failed to approve hours {hours_id}: {e}")
+                results.append({
+                    "hours_id": hours_id,
+                    "status": "failed",
+                    "error": str(e)
+                })
+        
+        logger.info(f"Batch approved {len(results)} hours entries")
+        return results
+    
     async def get_timesheet(
         self,
         employee_id: int,
@@ -197,6 +369,12 @@ class TimeTrackingService:
             "period_start": start_date.isoformat(),
             "period_end": end_date.isoformat(),
             "entries": entries_data,
+            "total_hours": total_hours,
+            "total_regular_hours": total_regular,
+            "total_overtime_hours": total_overtime,
+            "total_entries": len(entries_data),
+            "approved_entries": approved_count,
+            "pending_approval": len(entries_data) - approved_count,
             "summary": {
                 "total_hours": float(total_hours),
                 "regular_hours": float(total_regular),

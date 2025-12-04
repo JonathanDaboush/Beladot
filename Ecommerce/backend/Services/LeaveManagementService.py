@@ -36,13 +36,20 @@ class LeaveManagementService:
         end_date: date,
         hours_requested: float,
         pto_type: str = "vacation",
-        notes: str = None
+        notes: str = None,
+        minimum_notice_days: int = None
     ) -> PaidTimeOff:
         """
         Submit PTO request.
         
         Validates dates, hours, and balance before creating request.
         """
+        # Check advance notice if specified
+        if minimum_notice_days is not None:
+            days_until = (start_date - date.today()).days
+            if days_until < minimum_notice_days:
+                raise ValueError(f"PTO requests require {minimum_notice_days} days advance notice")
+        
         # Get current PTO balance
         from Classes.Employee import Employee as EmployeeClass
         employee = await self.employee_repo.get_by_id(employee_id)
@@ -85,7 +92,7 @@ class LeaveManagementService:
         
         # Check sufficient balance
         if not pto_class.is_sufficient_balance():
-            raise ValueError(f"Insufficient PTO balance. Available: {balance_data['hours_remaining']}h")
+            raise ValueError(f"insufficient balance. Available: {balance_data['hours_remaining']}h")
         
         # Check for conflicts
         conflicts = await self.pto_repo.check_conflicts(employee_id, start_date, end_date)
@@ -116,13 +123,18 @@ class LeaveManagementService:
         end_date: date,
         hours_requested: float,
         sick_type: str = "illness",
-        reason: str = None
+        reason: str = None,
+        notes: str = None  # Alias for reason
     ) -> PaidSick:
         """
         Submit sick leave request.
         
         Can be submitted retroactively within 7 days.
         """
+        # Use notes if provided instead of reason
+        if notes and not reason:
+            reason = notes
+        
         # Get current sick leave balance
         from Classes.Employee import Employee as EmployeeClass
         employee = await self.employee_repo.get_by_id(employee_id)
@@ -185,10 +197,16 @@ class LeaveManagementService:
         return result
     
     async def approve_pto(self, pto_id: int, reviewed_by: int) -> PaidTimeOff:
-        """Approve PTO request."""
+        """Approve PTO request and deduct from balance."""
         result = await self.pto_repo.approve_request(pto_id, reviewed_by)
         if not result:
             raise ValueError(f"PTO request {pto_id} not found")
+        
+        # Deduct from employee balance
+        employee = await self.employee_repo.get_by_id(result.employee_id)
+        if employee:
+            employee.pto_balance = Decimal(str(employee.pto_balance)) - Decimal(str(result.hours_requested))
+            await self.employee_repo.update(employee)
         
         logger.info(f"PTO request {pto_id} approved by employee {reviewed_by}")
         return result
@@ -208,10 +226,16 @@ class LeaveManagementService:
         return result
     
     async def approve_sick_leave(self, sick_id: int, reviewed_by: int) -> PaidSick:
-        """Approve sick leave request."""
+        """Approve sick leave request and deduct from balance."""
         result = await self.sick_repo.approve_request(sick_id, reviewed_by)
         if not result:
             raise ValueError(f"Sick leave request {sick_id} not found")
+        
+        # Deduct from employee balance
+        employee = await self.employee_repo.get_by_id(result.employee_id)
+        if employee:
+            employee.sick_balance = Decimal(str(employee.sick_balance)) - Decimal(str(result.hours_requested))
+            await self.employee_repo.update(employee)
         
         logger.info(f"Sick leave request {sick_id} approved by employee {reviewed_by}")
         return result
@@ -280,4 +304,135 @@ class LeaveManagementService:
             "department": department,
             "total_requests": len(calendar),
             "requests": calendar
+        }
+    
+    async def get_pto_balance(self, employee_id: int) -> Decimal:
+        """Get current PTO balance for employee."""
+        employee = await self.employee_repo.get_by_id(employee_id)
+        if not employee:
+            raise ValueError(f"Employee {employee_id} not found")
+        return Decimal(str(employee.pto_balance))
+    
+    async def get_sick_balance(self, employee_id: int) -> Decimal:
+        """Get current sick leave balance for employee."""
+        employee = await self.employee_repo.get_by_id(employee_id)
+        if not employee:
+            raise ValueError(f"Employee {employee_id} not found")
+        return Decimal(str(employee.sick_balance))
+    
+    async def accrue_pto(self, employee_id: int, hours: float) -> Decimal:
+        """Accrue PTO hours for employee."""
+        employee = await self.employee_repo.get_by_id(employee_id)
+        if not employee:
+            raise ValueError(f"Employee {employee_id} not found")
+        
+        employee.pto_balance = Decimal(str(employee.pto_balance)) + Decimal(str(hours))
+        await self.employee_repo.update(employee)
+        logger.info(f"Accrued {hours}h PTO for employee {employee_id}")
+        return employee.pto_balance
+    
+    async def accrue_sick_leave(self, employee_id: int, hours: float) -> Decimal:
+        """Accrue sick leave hours for employee."""
+        employee = await self.employee_repo.get_by_id(employee_id)
+        if not employee:
+            raise ValueError(f"Employee {employee_id} not found")
+        
+        employee.sick_balance = Decimal(str(employee.sick_balance)) + Decimal(str(hours))
+        await self.employee_repo.update(employee)
+        logger.info(f"Accrued {hours}h sick leave for employee {employee_id}")
+        return employee.sick_balance
+    
+    async def cancel_pto_request(self, pto_id: int, employee_id: int = None):
+        """Cancel a PTO request."""
+        from Models.PaidTimeOff import PTOStatus
+        
+        pto = await self.pto_repo.get_by_id(pto_id)
+        if not pto:
+            raise ValueError(f"PTO request {pto_id} not found")
+        
+        if pto.status != PTOStatus.PENDING:
+            raise ValueError(f"Can only cancel pending requests")
+        
+        pto.status = PTOStatus.CANCELLED
+        await self.pto_repo.update(pto)
+        logger.info(f"Cancelled PTO request {pto_id}")
+        
+        # Return dict-like object with status as string
+        class PTOResult:
+            def __init__(self, pto_obj):
+                self.id = pto_obj.id
+                self.status = pto_obj.status.value
+                self._pto = pto_obj
+            def __getattr__(self, name):
+                return getattr(self._pto, name)
+        
+        return PTOResult(pto)
+    
+    async def batch_accrue_pto(self, employee_ids: List[int], hours: float) -> List[Dict]:
+        """Batch accrue PTO hours for multiple employees."""
+        from decimal import Decimal
+        results = []
+        
+        for emp_id in employee_ids:
+            employee = await self.employee_repo.get_by_id(emp_id)
+            if not employee:
+                results.append({
+                    "employee_id": emp_id,
+                    "success": False,
+                    "error": "Employee not found"
+                })
+                continue
+            
+            old_balance = Decimal(str(employee.pto_balance or 0))
+            new_balance = old_balance + Decimal(str(hours))
+            
+            employee.pto_balance = new_balance
+            await self.employee_repo.update(employee)
+            
+            results.append({
+                "employee_id": emp_id,
+                "old_balance": old_balance,
+                "new_balance": new_balance,
+                "success": True
+            })
+        
+        logger.info(f"Batch accrued {hours}h for {len(employee_ids)} employees")
+        return results
+    
+    async def get_leave_history(
+        self, 
+        employee_id: int, 
+        start_date: date = None, 
+        end_date: date = None
+    ) -> Dict:
+        """Get leave history for employee."""
+        from datetime import date as date_class
+        
+        if not start_date:
+            start_date = date_class.today() - timedelta(days=365)
+        if not end_date:
+            end_date = date_class.today()
+        
+        pto_requests = await self.pto_repo.get_by_employee(employee_id)
+        sick_requests = await self.sick_repo.get_by_employee(employee_id)
+        
+        # Filter by date range
+        pto_filtered = [
+            pto for pto in pto_requests 
+            if pto.start_date >= start_date and pto.end_date <= end_date
+        ]
+        
+        sick_filtered = [
+            sick for sick in sick_requests 
+            if sick.start_date >= start_date and sick.end_date <= end_date
+        ]
+        
+        return {
+            "employee_id": employee_id,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "pto_requests": pto_filtered,
+            "sick_requests": sick_filtered,
+            "total_pto_hours": sum(float(pto.hours_requested) for pto in pto_filtered),
+            "total_sick_hours": sum(float(sick.hours_requested) for sick in sick_filtered)
         }

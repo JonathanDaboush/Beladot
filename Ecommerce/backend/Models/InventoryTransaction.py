@@ -71,7 +71,7 @@ class InventoryTransaction(Base):
     
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     product_id = Column(Integer, ForeignKey("products.id", ondelete="CASCADE"), nullable=False, index=True)
-    transaction_type = Column(SQLEnum(TransactionType), nullable=False)
+    transaction_type = Column(SQLEnum(TransactionType, values_callable=lambda x: [e.value for e in x]), nullable=False)
     quantity_change = Column(Integer, nullable=False)
     quantity_after = Column(Integer, nullable=False)
     reference_id = Column(String(100), nullable=True, index=True)

@@ -35,7 +35,7 @@ class ShiftSwap(Base):
     target_shift_id = Column(Integer, ForeignKey("employee_schedules.id"), nullable=True)  # Optional if just giving away
     
     # Approval workflow
-    status = Column(SQLEnum(SwapStatus), nullable=False, default=SwapStatus.PENDING)
+    status = Column(SQLEnum(SwapStatus, values_callable=lambda x: [e.value for e in x]), nullable=False, default=SwapStatus.PENDING)
     accepted_at = Column(DateTime, nullable=True)
     approved_by = Column(Integer, ForeignKey("employees.id"), nullable=True)  # Manager
     approved_at = Column(DateTime, nullable=True)
@@ -55,3 +55,9 @@ class ShiftSwap(Base):
     requesting_shift = relationship("EmployeeSchedule", foreign_keys=[requesting_shift_id])
     target_shift = relationship("EmployeeSchedule", foreign_keys=[target_shift_id])
     approver = relationship("Employee", foreign_keys=[approved_by])
+    
+    def __init__(self, **kwargs):
+        # Handle 'reason' parameter as alias for 'request_reason'
+        if 'reason' in kwargs:
+            kwargs['request_reason'] = kwargs.pop('reason')
+        super().__init__(**kwargs)

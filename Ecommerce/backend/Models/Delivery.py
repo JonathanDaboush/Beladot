@@ -25,16 +25,13 @@ class DeliveryStatus(enum.Enum):
 
 class Delivery(Base):
     """
-    Delivery tracking model for third-party carrier integrations.
-    
-    Your platform doesn't own logistics - this model stores references to
-    carrier shipments (Purolator, FedEx, DHL, UPS, Canada Post) and tracks
-    their status via API integrations and webhooks.
+    Internal delivery tracking system for order fulfillment.
+    Carriers are configurable via config.AVAILABLE_CARRIERS.
     
     Architecture:
-        - Carrier agnostic: Supports multiple carriers via adapter pattern
-        - Event-driven: Updates via webhooks from carriers
-        - Polling fallback: Background job syncs for carriers without webhooks
+        - Carrier agnostic: Supports multiple carriers from configuration
+        - Internal tracking: All status updates managed within application
+        - Configurable carriers: Add/remove carriers via config without schema changes
         - International ready: Customs, duties, multi-currency support
     
     Relationships:
@@ -42,18 +39,18 @@ class Delivery(Base):
         - shipment_id: Internal shipment grouping (multi-package orders)
         - return_id: If this is a return shipment
     
-    Carrier Integration Flow:
+    Delivery Tracking Flow:
         1. Customer completes checkout → create Delivery record (status=created)
-        2. Call carrier API → generate label, get tracking number
-        3. Update with tracking_number, label_url (status=label_created)
-        4. Carrier picks up → webhook updates status=picked_up
-        5. Package scans → tracking_events array grows
-        6. Delivered → webhook updates status=delivered, proof stored
+        2. Generate tracking number from ShippingCarrierService
+        3. Update with tracking_number (status=label_created)
+        4. Manual status updates through admin interface
+        5. Tracking events logged in tracking_events JSON field
+        6. Delivered → status=delivered, delivery proof recorded
     
-    Security:
-        - API keys stored in config, not in model
-        - Webhook signatures verified before processing
-        - Tracking URLs are public but don't expose sensitive order data
+    Configuration:
+        - Carriers defined in config.AVAILABLE_CARRIERS
+        - No external API keys required
+        - All tracking data stored internally
     """
     __tablename__ = "deliveries"
     
@@ -64,10 +61,10 @@ class Delivery(Base):
     return_id = Column(String, ForeignKey("returns.id"), nullable=True, index=True)
     delivery_type = Column(Enum(DeliveryType), nullable=False)
     
-    # Carrier Information (external service, not owned by you)
-    carrier = Column(String, nullable=True, index=True)  # "purolator", "fedex", "dhl", "ups", "canadapost"
-    service_level = Column(String, nullable=True)  # "express", "ground", "overnight", "international"
-    tracking_number = Column(String, nullable=True, unique=True, index=True)  # Carrier's tracking ID
+    # Carrier Information (internal tracking, carriers configurable in config.py)
+    carrier = Column(String(50), nullable=True, index=True)  # Validated against config.AVAILABLE_CARRIERS
+    service_level = Column(String(50), nullable=True)  # "express", "ground", "priority", etc.
+    tracking_number = Column(String, nullable=True, unique=True, index=True)  # Generated tracking ID
     tracking_url = Column(String, nullable=True)  # Deep link to carrier's tracking page
     label_url = Column(String, nullable=True)  # PDF shipping label from carrier API
     

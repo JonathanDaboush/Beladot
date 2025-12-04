@@ -14,7 +14,7 @@ class NotificationService:
     Notifications must be idempotent and keep delivery logs for audit.
     """
     
-    def __init__(self, job_repository, email_provider, sms_provider):
+    def __init__(self, job_repository, email_provider=None, sms_provider=None):
         self.job_repository = job_repository
         self.email_provider = email_provider
         self.sms_provider = sms_provider

@@ -1,4 +1,4 @@
-from hashing import bcrypt, check_password_hash
+from Utilities.hashing import bcrypt, check_password_hash
 import json
 import os
 

@@ -75,6 +75,21 @@ class EmployeeFinancial:
         # Real implementation needs proper CRA tables
         return round(taxable_income * Decimal("0.15"), 2)
     
+    def calculate_provincial_tax(self, gross_pay: Decimal) -> Decimal:
+        """
+        Calculate provincial income tax (simplified).
+        
+        This is a simplified calculation. Production systems should use
+        official provincial tax tables.
+        """
+        taxable_income = gross_pay
+        
+        if taxable_income <= Decimal("0"):
+            return Decimal("0")
+        
+        # Simplified: ~10% effective rate for demonstration
+        return round(taxable_income * Decimal("0.10"), 2)
+    
     def calculate_cpp_deduction(self, gross_pay: Decimal, ytd_cpp: Decimal = Decimal("0")) -> Decimal:
         """
         Calculate Canada Pension Plan (CPP) contribution.
@@ -126,20 +141,22 @@ class EmployeeFinancial:
         Returns breakdown of gross, deductions, and net.
         """
         federal_tax = self.calculate_federal_tax(gross_pay)
+        provincial_tax = self.calculate_provincial_tax(gross_pay)
         cpp = self.calculate_cpp_deduction(gross_pay, ytd_cpp)
         ei = self.calculate_ei_deduction(gross_pay, ytd_ei)
         
-        total_deductions = federal_tax + cpp + ei + other_deductions
+        total_deductions = federal_tax + provincial_tax + cpp + ei + other_deductions
         net_pay = gross_pay - total_deductions
         
         return {
-            "gross_pay": float(gross_pay),
-            "federal_tax": float(federal_tax),
-            "cpp_contribution": float(cpp),
-            "ei_premium": float(ei),
-            "other_deductions": float(other_deductions),
-            "total_deductions": float(total_deductions),
-            "net_pay": float(net_pay)
+            "gross_pay": gross_pay,
+            "federal_tax": federal_tax,
+            "provincial_tax": provincial_tax,
+            "cpp": cpp,
+            "ei": ei,
+            "other_deductions": other_deductions,
+            "total_deductions": total_deductions,
+            "net_pay": net_pay
         }
     
     def mask_account_number(self) -> str:

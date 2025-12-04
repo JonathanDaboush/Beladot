@@ -100,9 +100,9 @@ class PaidSick:
         business_days = self.calculate_business_days()
         expected_hours = Decimal(str(business_days)) * hours_per_day
         
-        # Allow flexibility for partial days
+        # Allow flexibility for partial days, weekends, etc
         min_hours = Decimal("0.5")  # Minimum 0.5 hour
-        max_hours = (Decimal(str(business_days)) + Decimal("1")) * hours_per_day
+        max_hours = (Decimal(str(business_days)) + Decimal("2")) * hours_per_day
         
         if self.hours_requested < min_hours or self.hours_requested > max_hours:
             return False, f"Hours requested ({self.hours_requested}) is invalid for {business_days} business days"

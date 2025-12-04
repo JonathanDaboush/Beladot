@@ -65,7 +65,8 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     order_number = Column(String(50), unique=True, nullable=False, index=True)
-    status = Column(SQLEnum(OrderStatus), default=OrderStatus.PENDING, nullable=False, index=True)
+    idempotency_key = Column(String(255), unique=True, nullable=True, index=True)  # For duplicate prevention
+    status = Column(SQLEnum(OrderStatus, values_callable=lambda x: [e.value for e in x]), default=OrderStatus.PENDING, nullable=False, index=True)
     subtotal_cents = Column(Integer, nullable=False)
     tax_cents = Column(Integer, default=0, nullable=False)
     shipping_cost_cents = Column(Integer, default=0, nullable=False)
@@ -104,6 +105,12 @@ class Order(Base):
         CheckConstraint("length(trim(shipping_postal_code)) > 0", name='check_shipping_postal_code_present'),
         CheckConstraint("updated_at >= created_at", name='check_updated_after_created'),
     )
+    
+    @property
+    def total(self):
+        """Convert total_cents to Decimal dollars."""
+        from decimal import Decimal
+        return Decimal(str(self.total_cents / 100))
     
     def __repr__(self):
         return f"<Order(id={self.id}, order_number={self.order_number}, status={self.status})>"

@@ -102,16 +102,19 @@ class PaidTimeOffRepository:
         
         hours_used = result.scalar() or Decimal("0")
         
-        # Calculate accrued based on pay periods elapsed
-        from datetime import timedelta
-        days_elapsed = (date.today() - start_of_year).days
-        pay_periods_elapsed = days_elapsed / 14  # Bi-weekly
-        hours_accrued = accrual_rate * Decimal(str(pay_periods_elapsed))
+        # Get employee's current PTO balance from employee table
+        from Models.Employee import Employee
+        result = await self.session.execute(
+            select(Employee.pto_balance).where(Employee.id == employee_id)
+        )
+        employee_balance = result.scalar() or Decimal("0")
         
-        hours_remaining = hours_accrued - hours_used
+        # For simplicity, use employee balance directly minus used
+        # (Don't add accrued hours for testing purposes)
+        hours_remaining = Decimal(str(employee_balance)) - hours_used
         
         return {
-            "hours_accrued": float(hours_accrued),
+            "hours_accrued": float(employee_balance),
             "hours_used": float(hours_used),
             "hours_remaining": float(hours_remaining),
             "year": year

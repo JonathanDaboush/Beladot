@@ -16,13 +16,8 @@ class ShipmentStatus(str, enum.Enum):
     FAILED = "failed"
 
 
-class ShipmentCarrier(str, enum.Enum):
-    """Supported shipping carriers for label generation."""
-    FEDEX = "fedex"
-    UPS = "ups"
-    USPS = "usps"
-    DHL = "dhl"
-    OTHER = "other"
+# Carrier values are now defined in config.py AVAILABLE_CARRIERS
+# This allows dynamic carrier configuration without schema changes
 
 
 class Shipment(Base):
@@ -60,10 +55,10 @@ class Shipment(Base):
         8. FAILED: Delivery failed (return to sender, lost, etc.)
         
     Carrier Integration:
-        - carrier: FedEx, UPS, USPS, DHL, or Other
-        - tracking_number: Carrier-provided tracking ID
-        - Carrier APIs: Generate labels, track packages, calculate rates
-        - Webhooks: Receive tracking updates from carriers
+        - carrier: Configurable carriers from config.AVAILABLE_CARRIERS (purolator, fedex, dhl, ups, canadapost)
+        - tracking_number: Generated tracking ID
+        - Internal tracking: All data managed within application
+        - Status updates: Manual or automated through admin interface
         
     Label Generation:
         1. Admin creates shipment (order_id, items, quantities)
@@ -137,8 +132,8 @@ class Shipment(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
     tracking_number = Column(String(100), nullable=True, index=True)
-    carrier = Column(SQLEnum(ShipmentCarrier), nullable=True)
-    status = Column(SQLEnum(ShipmentStatus), default=ShipmentStatus.PENDING, nullable=False, index=True)
+    carrier = Column(String(50), nullable=True, index=True)  # Validated against config.AVAILABLE_CARRIERS
+    status = Column(SQLEnum(ShipmentStatus, values_callable=lambda x: [e.value for e in x]), default=ShipmentStatus.PENDING, nullable=False, index=True)
     
     # Idempotency for carrier API calls (prevent duplicate label generation)
     idempotency_key = Column(String(100), unique=True, nullable=True, index=True)
@@ -166,7 +161,8 @@ class Shipment(Base):
     # Constraints
     __table_args__ = (
         # Tracking number uniqueness when present (nullable for pending shipments)
-        UniqueConstraint("tracking_number", name="uq_shipment_tracking_number", postgresql_where="tracking_number IS NOT NULL"),
+        # Removed postgresql_where for SQLAlchemy 2.x compatibility - enforce at application level
+        UniqueConstraint("tracking_number", name="uq_shipment_tracking_number"),
         
         # Timing constraints: delivered_at >= shipped_at
         CheckConstraint("delivered_at IS NULL OR shipped_at IS NULL OR delivered_at >= shipped_at", name="ck_shipment_delivery_after_shipping"),

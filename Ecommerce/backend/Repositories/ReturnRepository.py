@@ -6,20 +6,6 @@ from Models.AuditLog import AuditLog
 
 
 class ReturnRepository:
-
-        async def get_returned_item_ids(self, order_ids: list) -> set:
-            """
-            Get set of order_item_ids that have been returned for given orders.
-            """
-            result = await self.db.execute(
-                select(self.model.return_items).where(self.model.order_id.in_(order_ids))
-            )
-            returned = set()
-            for row in result:
-                items = row[0] or []
-                for entry in items:
-                    returned.add(entry.get('order_item_id'))
-            return returned
     """
     Data access layer for Return entities (customer returns/RMAs).
     
@@ -70,4 +56,18 @@ class ReturnRepository:
         await self.db.merge(return_obj)
         await self.db.commit()
         await self.db.refresh(return_obj)
+    
+    async def get_returned_item_ids(self, order_ids: list) -> set:
+        """
+        Get set of order_item_ids that have been returned for given orders.
+        """
+        result = await self.db.execute(
+            select(self.model.return_items).where(self.model.order_id.in_(order_ids))
+        )
+        returned = set()
+        for row in result:
+            items = row[0] or []
+            for entry in items:
+                returned.add(entry.get('order_item_id'))
+        return returned
     

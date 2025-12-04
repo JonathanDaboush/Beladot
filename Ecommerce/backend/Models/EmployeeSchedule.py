@@ -45,7 +45,7 @@ class EmployeeSchedule(Base):
     shift_date = Column(Date, nullable=False)
     shift_start = Column(Time, nullable=False)
     shift_end = Column(Time, nullable=False)
-    shift_type = Column(SQLEnum(ShiftType), nullable=False, default=ShiftType.FULL_DAY)
+    shift_type = Column(SQLEnum(ShiftType, values_callable=lambda x: [e.value for e in x]), nullable=False, default=ShiftType.FULL_DAY)
     
     # Location/department
     location = Column(String(100), nullable=True)  # Store location, warehouse, etc.
@@ -53,7 +53,7 @@ class EmployeeSchedule(Base):
     position = Column(String(100), nullable=True)  # Position for this shift
     
     # Status
-    status = Column(SQLEnum(ScheduleStatus), nullable=False, default=ScheduleStatus.SCHEDULED)
+    status = Column(SQLEnum(ScheduleStatus, values_callable=lambda x: [e.value for e in x]), nullable=False, default=ScheduleStatus.SCHEDULED)
     is_confirmed = Column(Boolean, default=False)  # Employee confirmed availability
     confirmed_at = Column(DateTime, nullable=True)
     
@@ -75,6 +75,6 @@ class EmployeeSchedule(Base):
     updated_at = Column(DateTime, nullable=False)
     
     # Relationships
-    employee = relationship("Employee", foreign_keys=[employee_id], back_populates="schedules")
+    employee = relationship("Employee", foreign_keys=[employee_id])
     creator = relationship("Employee", foreign_keys=[created_by])
     cover_employee = relationship("Employee", foreign_keys=[covered_by])

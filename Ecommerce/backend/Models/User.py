@@ -53,7 +53,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     
     # Authorization (minimal role, complex checks in AuthService)
-    role = Column(SQLEnum(UserRole), default=UserRole.CUSTOMER, nullable=False, index=True)
+    role = Column(SQLEnum(UserRole, values_callable=lambda x: [e.value for e in x]), default=UserRole.CUSTOMER, nullable=False, index=True)
     
     # Account status (checked before privileged operations)
     is_active = Column(Boolean, default=True, nullable=False, index=True)

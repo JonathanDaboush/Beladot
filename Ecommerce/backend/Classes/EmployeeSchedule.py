@@ -39,9 +39,10 @@ class EmployeeSchedule:
         start_dt = datetime.combine(self.shift_date, self.shift_start)
         end_dt = datetime.combine(self.shift_date, self.shift_end)
         
-        # Handle overnight shifts
+        # Reject invalid time ranges (end before start without explicit overnight flag)
+        # For now, treat end <= start as invalid (no overnight shifts)
         if end_dt <= start_dt:
-            end_dt += timedelta(days=1)
+            raise ValueError("Shift end time must be after start time")
         
         duration = end_dt - start_dt
         hours = duration.total_seconds() / 3600

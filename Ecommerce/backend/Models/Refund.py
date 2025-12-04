@@ -89,7 +89,7 @@ class Refund(Base):
     amount_cents = Column(Integer, nullable=False)
     restocking_fee_cents = Column(Integer, default=0, nullable=False)
     reason = Column(Text, nullable=False)
-    status = Column(SQLEnum(RefundStatus), default=RefundStatus.PENDING, nullable=False, index=True)
+    status = Column(SQLEnum(RefundStatus, values_callable=lambda x: [e.value for e in x]), default=RefundStatus.PENDING, nullable=False, index=True)
     gateway_transaction_id = Column(String(255), nullable=True, index=True)
     idempotency_key = Column(String(255), unique=True, nullable=True, index=True)
     admin_notes = Column(Text, nullable=True)

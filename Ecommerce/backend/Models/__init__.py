@@ -7,6 +7,9 @@ from .User import User, UserRole
 from .Address import Address
 from .Session import Session
 from .APIKey import APIKey
+from .Seller import Seller
+from .SellerFinance import SellerFinance
+from .SellerPayout import SellerPayout
 from .Category import Category
 from .Product import Product
 from .ProductImage import ProductImage
@@ -29,6 +32,14 @@ from .Blob import Blob
 from .AuditLog import AuditLog
 from .Job import Job, JobStatus
 from .ProductFeed import ProductFeed, FeedStatus
+from .Employee import Employee, EmploymentStatus, EmploymentType
+from .EmployeeFinancial import EmployeeFinancial, PaymentFrequency, PaymentMethod
+from .EmployeeSchedule import EmployeeSchedule, ShiftType, ScheduleStatus
+from .HoursWorked import HoursWorked, HoursType
+from .PaidTimeOff import PaidTimeOff, PTOType, PTOStatus
+from .PaidSick import PaidSick, SickLeaveType, SickLeaveStatus
+from .TimeOffRequest import TimeOffRequest, TimeOffType, TimeOffStatus
+from .ShiftSwap import ShiftSwap, SwapStatus
 
 __all__ = [
     # User related
@@ -37,6 +48,9 @@ __all__ = [
     "Address",
     "Session",
     "APIKey",
+    "Seller",
+    "SellerFinance",
+    "SellerPayout",
     
     # Product related
     "Category",
@@ -80,4 +94,27 @@ __all__ = [
     "JobStatus",
     "ProductFeed",
     "FeedStatus",
+    
+    # Employee related
+    "Employee",
+    "EmploymentStatus",
+    "EmploymentType",
+    "EmployeeFinancial",
+    "PaymentFrequency",
+    "EmployeeSchedule",
+    "ShiftType",
+    "ScheduleStatus",
+    "HoursWorked",
+    "HoursType",
+    "PaidTimeOff",
+    "PTOType",
+    "PTOStatus",
+    "PaidSick",
+    "SickLeaveType",
+    "SickLeaveStatus",
+    "TimeOffRequest",
+    "TimeOffType",
+    "TimeOffStatus",
+    "ShiftSwap",
+    "SwapStatus",
 ]

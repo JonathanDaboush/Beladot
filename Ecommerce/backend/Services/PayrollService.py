@@ -58,6 +58,19 @@ class PayrollService:
             end_date
         )
         
+        # Validate hours are not negative
+        if hours_data["regular_hours"] < 0 or hours_data["overtime_hours"] < 0:
+            raise ValueError("Hours cannot be negative")
+        if not financial:
+            raise ValueError(f"No financial information found for employee {employee_id}")
+        
+        # Get hours worked for pay period
+        hours_data = await self.hours_repo.calculate_total_hours(
+            employee_id,
+            start_date,
+            end_date
+        )
+        
         # Create business logic instance
         financial_class = EmployeeFinancialClass(
             employee_id=financial.employee_id,
@@ -75,15 +88,22 @@ class PayrollService:
             overtime_multiplier=financial.overtime_rate_multiplier
         )
         
+        # Calculate overtime pay separately for reporting
+        overtime_pay = (
+            Decimal(str(hours_data["overtime_hours"])) * 
+            financial.pay_rate * 
+            financial.overtime_rate_multiplier
+        ) if hours_data["overtime_hours"] > 0 else Decimal("0")
+        
         # Get YTD deductions (simplified - would query payroll history in production)
         ytd_cpp = Decimal("0")  # Would calculate from previous paychecks
         ytd_ei = Decimal("0")    # Would calculate from previous paychecks
         
-        # Calculate deductions
+        # Calculate deductions (handle None values)
         other_deductions = (
-            financial.health_insurance_deduction +
-            financial.retirement_contribution +
-            financial.other_deductions
+            (financial.health_insurance_deduction or Decimal("0")) +
+            (financial.retirement_contribution or Decimal("0")) +
+            (financial.other_deductions or Decimal("0"))
         )
         
         net_pay_breakdown = financial_class.calculate_net_pay(
@@ -100,7 +120,8 @@ class PayrollService:
             "pay_period_end": end_date.isoformat(),
             "hours_breakdown": hours_data,
             "pay_rate": float(financial.pay_rate),
-            "is_salary": financial.is_salary
+            "is_salary": financial.is_salary,
+            "overtime_pay": overtime_pay
         })
         
         logger.info(f"Calculated paycheck for employee {employee_id}: ${net_pay_breakdown['net_pay']}")
@@ -127,8 +148,8 @@ class PayrollService:
         results = {
             "success": [],
             "failed": [],
-            "total_gross": 0.0,
-            "total_net": 0.0
+            "total_gross": Decimal("0"),
+            "total_net": Decimal("0")
         }
         
         for emp_id in employee_ids:
@@ -139,14 +160,17 @@ class PayrollService:
                     pay_period_end
                 )
                 
+                gross = Decimal(str(paycheck["gross_pay"]))
+                net = Decimal(str(paycheck["net_pay"]))
+                
                 results["success"].append({
                     "employee_id": emp_id,
-                    "gross_pay": paycheck["gross_pay"],
-                    "net_pay": paycheck["net_pay"]
+                    "gross_pay": float(gross),
+                    "net_pay": float(net)
                 })
                 
-                results["total_gross"] += paycheck["gross_pay"]
-                results["total_net"] += paycheck["net_pay"]
+                results["total_gross"] += gross
+                results["total_net"] += net
                 
             except Exception as e:
                 logger.error(f"Failed to process payroll for employee {emp_id}: {e}")
@@ -154,6 +178,10 @@ class PayrollService:
                     "employee_id": emp_id,
                     "error": str(e)
                 })
+        
+        # Convert totals to float for JSON serialization
+        results["total_gross"] = float(results["total_gross"])
+        results["total_net"] = float(results["total_net"])
         
         logger.info(f"Processed payroll batch: {len(results['success'])} success, {len(results['failed'])} failed")
         
@@ -293,3 +321,20 @@ class PayrollService:
             "sick_leave": sick_balance,
             "year": year
         }
+    
+    # Alias for test compatibility
+    async def process_batch_payroll(
+        self,
+        employee_ids: List[int],
+        pay_period_start: date,
+        pay_period_end: date
+    ):
+        """Alias for process_payroll_batch with different parameter order."""
+        result = await self.process_payroll_batch(
+            pay_period_start=pay_period_start,
+            pay_period_end=pay_period_end,
+            employee_ids=employee_ids
+        )
+        # Return just the success list for backward compatibility
+        return result["success"]
+

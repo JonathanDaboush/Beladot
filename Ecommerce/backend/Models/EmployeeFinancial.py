@@ -38,8 +38,8 @@ class EmployeeFinancial(Base):
     overtime_rate_multiplier = Column(Numeric(4, 2), default=1.5)  # 1.5x for overtime
     
     # Payment Details
-    payment_frequency = Column(Enum(PaymentFrequency), nullable=False, default=PaymentFrequency.BI_WEEKLY)
-    payment_method = Column(Enum(PaymentMethod), nullable=False, default=PaymentMethod.DIRECT_DEPOSIT)
+    payment_frequency = Column(Enum(PaymentFrequency, values_callable=lambda x: [e.value for e in x]), nullable=False, default=PaymentFrequency.BI_WEEKLY)
+    payment_method = Column(Enum(PaymentMethod, values_callable=lambda x: [e.value for e in x]), nullable=False, default=PaymentMethod.DIRECT_DEPOSIT)
     
     # Banking Information (encrypted in production)
     bank_name = Column(String(100))
@@ -51,6 +51,10 @@ class EmployeeFinancial(Base):
     tax_id_number = Column(String(50))  # SIN (Canada) / SSN (US) - Should be encrypted
     tax_exemptions = Column(Integer, default=0)
     additional_tax_withholding = Column(Numeric(10, 2), default=0.00)
+    federal_tax_rate = Column(Numeric(5, 4), default=0.15)  # Federal tax rate (e.g., 0.15 = 15%)
+    provincial_tax_rate = Column(Numeric(5, 4), default=0.10)  # Provincial/state tax rate
+    cpp_contribution_rate = Column(Numeric(5, 4), default=0.0595)  # Canada Pension Plan rate
+    ei_contribution_rate = Column(Numeric(5, 4), default=0.0166)  # Employment Insurance rate
     
     # Benefits Deductions (monthly amounts)
     health_insurance_deduction = Column(Numeric(10, 2), default=0.00)

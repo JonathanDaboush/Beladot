@@ -74,7 +74,7 @@ class ProductImage(Base):
     __table_args__ = (
         CheckConstraint("sort_order >= 0", name='check_sort_order_non_negative'),
         UniqueConstraint('product_id', 'sort_order', name='unique_product_sort_order'),
-        UniqueConstraint('product_id', 'is_primary', name='unique_product_primary', postgresql_where="is_primary = true"),
+        # Removed postgresql_where for compatibility - unique constraint will be enforced at application level
     )
     
     def __repr__(self):

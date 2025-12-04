@@ -34,6 +34,21 @@ class SessionRepository:
         self.db = db
         self.model = Session
     
+    async def create(self, session: Session) -> Session:
+        """
+        Create a new session.
+        
+        Args:
+            session: Session object to create
+            
+        Returns:
+            Created session with database ID
+        """
+        self.db.add(session)
+        await self.db.flush()
+        await self.db.refresh(session)
+        return session
+    
     async def update(self, session: Session):
         """
         Update session data (last activity, expiration).

@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from Models.Payment import Payment
+from Models.Refund import Refund
 
 
 class PaymentRepository:
@@ -70,3 +71,28 @@ class PaymentRepository:
     async def get_by_id(self, payment_id: int) -> Payment:
         result = await self.db.execute(select(self.model).where(self.model.id == payment_id))
         return result.scalar_one_or_none()
+
+    async def create(self, payment: Payment) -> Payment:
+        """Create a new payment."""
+        self.db.add(payment)
+        await self.db.commit()
+        await self.db.refresh(payment)
+        return payment
+    
+    async def get_by_id(self, payment_id: int) -> Payment:
+        """Get payment by ID."""
+        result = await self.db.execute(select(Payment).where(Payment.id == payment_id))
+        return result.scalar_one_or_none()
+    
+    async def update(self, payment: Payment):
+        """Update payment."""
+        await self.db.merge(payment)
+        await self.db.commit()
+        await self.db.refresh(payment)
+    
+    async def create_refund(self, refund: Refund) -> Refund:
+        """Create a refund."""
+        self.db.add(refund)
+        await self.db.commit()
+        await self.db.refresh(refund)
+        return refund

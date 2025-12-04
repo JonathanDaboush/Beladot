@@ -58,7 +58,7 @@ class Category(Base):
     name = Column(String(100), nullable=False, index=True)
     description = Column(Text, nullable=True)
     slug = Column(String(100), unique=True, nullable=False, index=True)
-    metadata = Column(JSON, nullable=True)
+    category_metadata = Column(JSON, nullable=True)  # Renamed from 'metadata' to avoid SQLAlchemy reserved word
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
