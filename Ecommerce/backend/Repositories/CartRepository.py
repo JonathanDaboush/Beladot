@@ -179,22 +179,6 @@ class CartRepository:
         await self.db.commit()
         return True
     
-    async def merge_carts(self, source_cart_id: int, dest_cart_id: int) -> Cart:
-        """Merge source cart items into destination cart."""
-        # Get source items
-        result = await self.db.execute(select(CartItem).where(CartItem.cart_id == source_cart_id))
-        source_items = result.scalars().all()
-        
-        # Add each item to destination
-        for item in source_items:
-            await self.add_item_to_cart(dest_cart_id, item.product_id, item.quantity)
-        
-        # Clear source cart
-        await self.clear_cart(source_cart_id)
-        
-        # Return destination cart
-        return await self.get_by_id(dest_cart_id)
-    
     async def apply_coupon_to_cart(self, cart_id: int, coupon_code: str) -> bool:
         """Apply coupon to cart."""
         # Cart model doesn't have coupon_code field

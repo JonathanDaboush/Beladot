@@ -3,6 +3,21 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 from typing import Dict, Any
+"""
+Email Service - SMTP and Template Rendering
+===========================================
+
+Handles email sending with template rendering and SMTP configuration.
+
+Business rules enforced at service layer
+
+Dependencies:
+See __init__ method for dependencies
+
+Author: Jonathan Daboush
+Version: 2.0.0
+"""
+
 
 
 class EmailService:

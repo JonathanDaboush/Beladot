@@ -1,4 +1,20 @@
 import requests
+"""
+Currency Conversion Service
+===========================
+
+Handles multi-currency support and exchange rates.
+
+Business rules enforced at service layer
+
+Dependencies:
+- ExchangeRateProvider
+    - CurrencyRepository
+
+Author: Jonathan Daboush
+Version: 2.0.0
+"""
+
 
 class CurrencyConversionService:
     """

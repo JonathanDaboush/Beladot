@@ -116,86 +116,6 @@ class LeaveManagementService:
         
         return result
     
-    async def request_sick_leave(
-        self,
-        employee_id: int,
-        start_date: date,
-        end_date: date,
-        hours_requested: float,
-        sick_type: str = "illness",
-        reason: str = None,
-        notes: str = None  # Alias for reason
-    ) -> PaidSick:
-        """
-        Submit sick leave request.
-        
-        Can be submitted retroactively within 7 days.
-        """
-        # Use notes if provided instead of reason
-        if notes and not reason:
-            reason = notes
-        
-        # Get current sick leave balance
-        from Classes.Employee import Employee as EmployeeClass
-        employee = await self.employee_repo.get_by_id(employee_id)
-        if not employee:
-            raise ValueError(f"Employee {employee_id} not found")
-        
-        emp_class = EmployeeClass(
-            first_name=employee.first_name,
-            last_name=employee.last_name,
-            email=employee.email,
-            employee_number=employee.employee_number,
-            position=employee.position,
-            department=employee.department,
-            hire_date=employee.hire_date
-        )
-        
-        accrual_rate = Decimal(str(emp_class.calculate_sick_accrual_rate()))
-        balance_data = await self.sick_repo.calculate_sick_balance(employee_id, accrual_rate)
-        
-        # Validate using business logic
-        sick_class = SickClass(
-            employee_id=employee_id,
-            start_date=start_date,
-            end_date=end_date,
-            hours_requested=Decimal(str(hours_requested)),
-            sick_type=sick_type,
-            reason_notes=reason,
-            balance_before=Decimal(str(balance_data["hours_remaining"]))
-        )
-        
-        # Validate dates
-        is_valid, error_msg = sick_class.validate_dates()
-        if not is_valid:
-            raise ValueError(error_msg)
-        
-        # Validate hours
-        is_valid, error_msg = sick_class.validate_hours()
-        if not is_valid:
-            raise ValueError(error_msg)
-        
-        # Check if doctor's note required
-        requires_note = sick_class.requires_doctors_note()
-        
-        # Create sick leave request
-        sick = PaidSick(
-            employee_id=employee_id,
-            sick_type=SickLeaveType[sick_type.upper()],
-            start_date=start_date,
-            end_date=end_date,
-            hours_requested=Decimal(str(hours_requested)),
-            reason_notes=reason,
-            balance_before=Decimal(str(balance_data["hours_remaining"])),
-            balance_after=sick_class.calculate_balance_after(),
-            requires_doctors_note=requires_note
-        )
-        
-        result = await self.sick_repo.create(sick)
-        logger.info(f"Sick leave request created for employee {employee_id}: {hours_requested}h from {start_date} to {end_date}")
-        
-        return result
-    
     async def approve_pto(self, pto_id: int, reviewed_by: int) -> PaidTimeOff:
         """Approve PTO request and deduct from balance."""
         result = await self.pto_repo.approve_request(pto_id, reviewed_by)
@@ -223,21 +143,6 @@ class LeaveManagementService:
             raise ValueError(f"PTO request {pto_id} not found")
         
         logger.info(f"PTO request {pto_id} denied by employee {reviewed_by}")
-        return result
-    
-    async def approve_sick_leave(self, sick_id: int, reviewed_by: int) -> PaidSick:
-        """Approve sick leave request and deduct from balance."""
-        result = await self.sick_repo.approve_request(sick_id, reviewed_by)
-        if not result:
-            raise ValueError(f"Sick leave request {sick_id} not found")
-        
-        # Deduct from employee balance
-        employee = await self.employee_repo.get_by_id(result.employee_id)
-        if employee:
-            employee.sick_balance = Decimal(str(employee.sick_balance)) - Decimal(str(result.hours_requested))
-            await self.employee_repo.update(employee)
-        
-        logger.info(f"Sick leave request {sick_id} approved by employee {reviewed_by}")
         return result
     
     async def get_leave_calendar(
@@ -306,20 +211,6 @@ class LeaveManagementService:
             "requests": calendar
         }
     
-    async def get_pto_balance(self, employee_id: int) -> Decimal:
-        """Get current PTO balance for employee."""
-        employee = await self.employee_repo.get_by_id(employee_id)
-        if not employee:
-            raise ValueError(f"Employee {employee_id} not found")
-        return Decimal(str(employee.pto_balance))
-    
-    async def get_sick_balance(self, employee_id: int) -> Decimal:
-        """Get current sick leave balance for employee."""
-        employee = await self.employee_repo.get_by_id(employee_id)
-        if not employee:
-            raise ValueError(f"Employee {employee_id} not found")
-        return Decimal(str(employee.sick_balance))
-    
     async def accrue_pto(self, employee_id: int, hours: float) -> Decimal:
         """Accrue PTO hours for employee."""
         employee = await self.employee_repo.get_by_id(employee_id)
@@ -341,32 +232,6 @@ class LeaveManagementService:
         await self.employee_repo.update(employee)
         logger.info(f"Accrued {hours}h sick leave for employee {employee_id}")
         return employee.sick_balance
-    
-    async def cancel_pto_request(self, pto_id: int, employee_id: int = None):
-        """Cancel a PTO request."""
-        from Models.PaidTimeOff import PTOStatus
-        
-        pto = await self.pto_repo.get_by_id(pto_id)
-        if not pto:
-            raise ValueError(f"PTO request {pto_id} not found")
-        
-        if pto.status != PTOStatus.PENDING:
-            raise ValueError(f"Can only cancel pending requests")
-        
-        pto.status = PTOStatus.CANCELLED
-        await self.pto_repo.update(pto)
-        logger.info(f"Cancelled PTO request {pto_id}")
-        
-        # Return dict-like object with status as string
-        class PTOResult:
-            def __init__(self, pto_obj):
-                self.id = pto_obj.id
-                self.status = pto_obj.status.value
-                self._pto = pto_obj
-            def __getattr__(self, name):
-                return getattr(self._pto, name)
-        
-        return PTOResult(pto)
     
     async def batch_accrue_pto(self, employee_ids: List[int], hours: float) -> List[Dict]:
         """Batch accrue PTO hours for multiple employees."""
@@ -398,41 +263,3 @@ class LeaveManagementService:
         
         logger.info(f"Batch accrued {hours}h for {len(employee_ids)} employees")
         return results
-    
-    async def get_leave_history(
-        self, 
-        employee_id: int, 
-        start_date: date = None, 
-        end_date: date = None
-    ) -> Dict:
-        """Get leave history for employee."""
-        from datetime import date as date_class
-        
-        if not start_date:
-            start_date = date_class.today() - timedelta(days=365)
-        if not end_date:
-            end_date = date_class.today()
-        
-        pto_requests = await self.pto_repo.get_by_employee(employee_id)
-        sick_requests = await self.sick_repo.get_by_employee(employee_id)
-        
-        # Filter by date range
-        pto_filtered = [
-            pto for pto in pto_requests 
-            if pto.start_date >= start_date and pto.end_date <= end_date
-        ]
-        
-        sick_filtered = [
-            sick for sick in sick_requests 
-            if sick.start_date >= start_date and sick.end_date <= end_date
-        ]
-        
-        return {
-            "employee_id": employee_id,
-            "start_date": start_date.isoformat(),
-            "end_date": end_date.isoformat(),
-            "pto_requests": pto_filtered,
-            "sick_requests": sick_filtered,
-            "total_pto_hours": sum(float(pto.hours_requested) for pto in pto_filtered),
-            "total_sick_hours": sum(float(sick.hours_requested) for sick in sick_filtered)
-        }

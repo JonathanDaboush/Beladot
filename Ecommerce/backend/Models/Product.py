@@ -53,7 +53,15 @@ class Product(Base):
     cost_cents = Column(Integer, nullable=True)
     sku = Column(String(100), unique=True, nullable=False, index=True)
     stock_quantity = Column(Integer, default=0, nullable=False)
+    
+    # Main categorization (catalog organization - e.g., Electronics -> Television)
+    main_category_id = Column(Integer, ForeignKey("main_categories.id", ondelete="SET NULL"), nullable=True, index=True)
+    main_subcategory_id = Column(Integer, ForeignKey("main_subcategories.id", ondelete="SET NULL"), nullable=True, index=True)
+    
+    # Legacy category (deprecated, kept for backward compatibility)
     category_id = Column(Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True)
+    subcategory_id = Column(Integer, ForeignKey("subcategories.id", ondelete="SET NULL"), nullable=True, index=True)
+    
     seller_id = Column(Integer, ForeignKey("sellers.id"), nullable=False, index=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     weight = Column(Integer, nullable=True)
@@ -61,7 +69,14 @@ class Product(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
+    # Main categorization relationships
+    main_category = relationship("MainCategory", back_populates="products")
+    main_subcategory = relationship("MainSubcategory", back_populates="products")
+    
+    # Legacy category relationship
     category = relationship("Category", back_populates="products")
+    subcategory = relationship("Subcategory", back_populates="products")
+    
     seller = relationship("Seller", back_populates="products")
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
     variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")

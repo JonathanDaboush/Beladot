@@ -93,51 +93,6 @@ class TimeTrackingService:
         
         return result
     
-    async def submit_manual_hours(
-        self,
-        employee_id: int,
-        work_date: date,
-        regular_hours: float,
-        overtime_hours: float = 0.0,
-        notes: str = None
-    ) -> HoursWorked:
-        """
-        Submit manual hours entry (for salaried employees or corrections).
-        """
-        # Check for existing entry
-        existing = await self.hours_repo.get_by_employee_and_date(employee_id, work_date)
-        if existing:
-            raise ValueError(f"Hours already submitted for {work_date}")
-        
-        # Validate hours
-        hours_class = HoursWorkedClass(
-            employee_id=employee_id,
-            work_date=work_date,
-            regular_hours=Decimal(str(regular_hours)),
-            overtime_hours=Decimal(str(overtime_hours))
-        )
-        
-        is_valid, error_msg = hours_class.validate_hours()
-        if not is_valid:
-            raise ValueError(error_msg)
-        
-        # Create hours entry
-        hours = HoursWorked(
-            employee_id=employee_id,
-            work_date=work_date,
-            regular_hours=Decimal(str(regular_hours)),
-            overtime_hours=Decimal(str(overtime_hours)),
-            double_time_hours=Decimal("0"),
-            holiday_hours=Decimal("0"),
-            total_hours=hours_class.calculate_total_hours(),
-            notes=notes
-        )
-        
-        result = await self.hours_repo.create(hours)
-        logger.info(f"Manual hours submitted for employee {employee_id}: {result.total_hours}h on {work_date}")
-        
-        return result
-    
     async def approve_hours(
         self,
         hours_id: int,
@@ -264,32 +219,6 @@ class TimeTrackingService:
         
         result = await self.hours_repo.update(hours)
         logger.info(f"Hours {hours_id} edited")
-        return result
-    
-    async def add_break_time(
-        self,
-        hours_id: int,
-        break_minutes: int
-    ) -> HoursWorked:
-        """Add break time to deduct from total hours."""
-        hours = await self.hours_repo.get_by_id(hours_id)
-        if not hours:
-            raise ValueError(f"Hours entry {hours_id} not found")
-        
-        # Store the break time in minutes
-        hours.unpaid_break_minutes = (hours.unpaid_break_minutes or 0) + break_minutes
-        
-        # Deduct break time from total hours
-        break_hours = Decimal(str(break_minutes)) / Decimal("60")
-        hours.total_hours = max(Decimal("0"), hours.total_hours - break_hours)
-        
-        # Adjust regular hours if needed
-        if hours.regular_hours > hours.total_hours:
-            hours.regular_hours = hours.total_hours
-            hours.overtime_hours = Decimal("0")
-        
-        result = await self.hours_repo.update(hours)
-        logger.info(f"Added {break_minutes} min break to hours {hours_id}")
         return result
     
     async def batch_approve_hours(

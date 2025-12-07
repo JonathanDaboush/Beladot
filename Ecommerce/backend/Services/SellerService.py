@@ -2,6 +2,22 @@ from Models.Seller import Seller
 from Models.SellerFinance import SellerFinance
 from Repositories.SellerRepository import SellerRepository
 from Repositories.SellerFinanceRepository import SellerFinanceRepository
+"""
+Seller Service - Marketplace Management
+=======================================
+
+Manages seller accounts, products, and payouts.
+
+Business rules enforced at service layer
+
+Dependencies:
+- SellerRepository
+    - ProductRepository
+
+Author: Jonathan Daboush
+Version: 2.0.0
+"""
+
 
 
 class SellerService:

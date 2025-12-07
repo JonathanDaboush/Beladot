@@ -78,3 +78,33 @@ class EmployeeSchedule(Base):
     employee = relationship("Employee", foreign_keys=[employee_id])
     creator = relationship("Employee", foreign_keys=[created_by])
     cover_employee = relationship("Employee", foreign_keys=[covered_by])
+    
+    def calculate_shift_hours(self) -> float:
+        """
+        Calculate total shift duration in hours.
+        Returns hours for the shift from start to end time.
+        """
+        from datetime import datetime, timedelta
+        
+        # Combine shift date with times
+        start_dt = datetime.combine(self.shift_date, self.shift_start)
+        end_dt = datetime.combine(self.shift_date, self.shift_end)
+        
+        # Handle overnight shifts
+        if end_dt <= start_dt:
+            end_dt += timedelta(days=1)
+        
+        # Calculate duration
+        duration = end_dt - start_dt
+        hours = duration.total_seconds() / 3600
+        
+        return round(hours, 2)
+    
+    def calculate_paid_hours(self) -> float:
+        """
+        Calculate paid hours (total hours minus unpaid breaks).
+        """
+        total_hours = self.calculate_shift_hours()
+        unpaid_break_hours = (self.unpaid_break_minutes or 0) / 60
+        paid_hours = total_hours - unpaid_break_hours
+        return round(max(0, paid_hours), 2)

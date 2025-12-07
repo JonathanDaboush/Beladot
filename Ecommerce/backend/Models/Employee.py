@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Enum, DateTime, Boolean, Numeric
+from sqlalchemy import Column, Integer, String, Date, Enum, DateTime, Boolean, Numeric, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 import enum
@@ -54,8 +54,8 @@ class Employee(Base):
     work_country = Column(String(50), default="CA")
     work_postal_code = Column(String(20))
     
-    # Manager/Reporting
-    manager_id = Column(Integer, nullable=True)  # ID of manager employee
+    # Manager/Reporting (hierarchical structure for department-based approvals)
+    manager_id = Column(Integer, ForeignKey("employees.id", ondelete="SET NULL"), nullable=True, index=True)
     
     # Leave Balances (hours)
     pto_balance = Column(Numeric(7, 2), default=0.0, nullable=False)
@@ -71,6 +71,9 @@ class Employee(Base):
     hours_worked = relationship("HoursWorked", back_populates="employee")
     paid_time_off = relationship("PaidTimeOff", back_populates="employee")
     paid_sick = relationship("PaidSick", back_populates="employee")
+    schedules = relationship("EmployeeSchedule", back_populates="employee", cascade="all, delete-orphan")
+    manager = relationship("Employee", remote_side=[id], back_populates="subordinates", foreign_keys=[manager_id])
+    subordinates = relationship("Employee", back_populates="manager", foreign_keys=[manager_id])
     
     def __repr__(self):
         return f"<Employee {self.employee_number}: {self.first_name} {self.last_name}>"

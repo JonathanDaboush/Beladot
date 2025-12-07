@@ -19,6 +19,7 @@ class Seller(Base):
     verified_at = Column(DateTime(timezone=True), nullable=True)
     user = relationship("User", back_populates="seller_profile")
     products = relationship("Product", back_populates="seller", cascade="all, delete-orphan")
+    variant_categories = relationship("VariantCategory", back_populates="seller", cascade="all, delete-orphan")
     finance_info = relationship("SellerFinance", back_populates="seller", uselist=False, cascade="all, delete-orphan")
     payouts = relationship("SellerPayout", back_populates="seller", cascade="all, delete-orphan")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

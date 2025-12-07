@@ -7,12 +7,36 @@ import enum
 
 class UserRole(str, enum.Enum):
     """
-    Role-based access control (minimal).
-    Complex access checks belong to AuthService.
+    Role-based access control for e-commerce and employee management.
+    
+    Hierarchy:
+    - customer: Default role for shoppers (orders, cart, reviews)
+    - customer_service: Staff handling customer inquiries and support
+    - manager: Department managers (approve time tracking, scheduling, manage team)
+    - analyst: Data analysis, metrics tracking, performance reporting (read-only access to analytics)
+    - seller: Product management and sales tracking
+    - transfer: Inventory management (import/export operations)
+    - finance: Payment processing, employee payroll, financial operations
+    - admin: Full system access (inherits all permissions)
+    
+    Permission model:
+    - Admins can do everything
+    - Finance handles payroll, payments, and financial data
+    - Analysts have read-only access to all analytics, metrics, and reporting data
+    - Managers approve time tracking, scheduling, leave requests for their department
+    - Customer Service handles customer inquiries and basic support
+    - Sellers manage products and view their sales
+    - Transfer role handles inventory movements
+    - Customers can only interact with shopping features
     """
-    ADMIN = "admin"
     CUSTOMER = "customer"
-    SUPPORT = "support"
+    CUSTOMER_SERVICE = "customer_service"
+    MANAGER = "manager"
+    ANALYST = "analyst"
+    SELLER = "seller"
+    TRANSFER = "transfer"
+    FINANCE = "finance"
+    ADMIN = "admin"
 
 
 class User(Base):
@@ -72,6 +96,9 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
+    # User preferences
+    preferred_currency = Column(String(3), default="USD", nullable=False)  # ISO 4217 currency code (USD, EUR, GBP, etc.)
+    
     # Relationships (business activity anchored to User)
     addresses = relationship("Address", back_populates="user", cascade="all, delete-orphan")
     orders = relationship("Order", back_populates="user", cascade="all, delete-orphan")
@@ -81,6 +108,7 @@ class User(Base):
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
     seller_profile = relationship("Seller", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    stored_payment_methods = relationship("StoredPaymentMethod", back_populates="user", cascade="all, delete-orphan")
     
     # Constraints
     __table_args__ = (
@@ -99,6 +127,10 @@ class User(Base):
         
         # Failed login attempts: non-negative
         CheckConstraint("failed_login_attempts >= 0", name="ck_user_failed_attempts_nonnegative"),
+        
+        # Preferred currency: valid ISO 4217 code (3 uppercase letters)
+        CheckConstraint("LENGTH(preferred_currency) = 3", name="ck_user_currency_length"),
+        CheckConstraint("preferred_currency = UPPER(preferred_currency)", name="ck_user_currency_uppercase"),
         
         # Locked account: locked_until must be in the future when set
         # (Application enforces: unlock when locked_until < now())

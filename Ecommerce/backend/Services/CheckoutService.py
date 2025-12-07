@@ -1,8 +1,58 @@
+"""
+Checkout Service - Order Creation and Validation
+=================================================
+
+Manages the checkout process from cart to order:
+- Order creation from cart with idempotency support
+- Inventory validation and reservation
+- Cart validation before checkout
+- Order total calculations with tax and discounts
+- Address handling (shipping/billing)
+- Payment method integration
+- Post-checkout notifications
+
+Business Rules:
+    - Cart must not be empty
+    - All items must have sufficient inventory
+    - Idempotency keys prevent duplicate orders
+    - Inventory reserved on order creation
+    - Cart cleared after successful order
+    - Notifications sent to customer and admin
+
+Idempotency:
+    Duplicate submissions with same idempotency_key return
+    the existing order instead of creating a new one.
+    This prevents duplicate charges from network retries.
+
+Dependencies:
+    - OrderRepository: Order persistence
+    - CartService: Cart retrieval and clearing
+    - InventoryService: Stock validation and reservation
+    - PaymentService: Payment processing
+    - PricingService: Tax and discount calculations
+    - NotificationService: Order confirmations
+
+Author: Jonathan Daboush
+Version: 2.0.0
+"""
 from typing import Dict, Optional
 from decimal import Decimal
 
 class CheckoutService:
-    """Checkout service with minimal working implementations for tests."""
+    """
+    Checkout service handling order creation from shopping cart.
+    
+    Orchestrates the complete checkout process:
+        1. Validate cart and inventory availability
+        2. Calculate final pricing (subtotal, tax, shipping, discounts)
+        3. Create order with idempotency protection
+        4. Reserve inventory for ordered items
+        5. Process payment (if payment method provided)
+        6. Clear cart after successful order
+        7. Send confirmation notifications
+    
+    All operations are transactional to ensure data consistency.
+    """
     
     def __init__(self, order_repository, cart_service, inventory_service, payment_service, pricing_service, notification_service):
         self.order_repository = order_repository

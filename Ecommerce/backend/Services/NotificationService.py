@@ -1,3 +1,39 @@
+"""
+Notification Service - Messaging and Alerts
+===========================================
+
+Asynchronous messaging service for:
+- Email notifications (order confirmations, shipping updates, etc.)
+- SMS alerts (OTP, delivery notifications)
+- Webhook delivery (external integrations)
+- Push notifications (mobile app alerts)
+
+Architecture:
+    - Queue-based: Messages queued as Jobs for reliability
+    - Async delivery: Non-blocking operations
+    - Retry mechanism: Failed deliveries retried with backoff
+    - Dead letter queue: Failed messages archived for investigation
+    - Idempotent: Duplicate messages detected and prevented
+
+Templating:
+    - Safe context rendering (escapes user input)
+    - No sensitive data in templates
+    - Localization support (future)
+    - HTML and plain text versions
+
+Delivery Tracking:
+    - Audit logs for all notification attempts
+    - Delivery status tracking
+    - Bounce and complaint handling
+
+Dependencies:
+    - JobRepository: Message queue persistence
+    - EmailProvider: SMTP/SendGrid/SES integration
+    - SMSProvider: Twilio/SNS integration
+
+Author: Jonathan Daboush
+Version: 2.0.0
+"""
 from typing import Any
 from uuid import UUID
 
@@ -7,11 +43,10 @@ from Ecommerce.backend.Utilities.email import EmailService as emailservice
 
 class NotificationService:
     """
-    Messaging and Notification Service
-    Asynchronous messaging backbone for emails, SMS, and outbound webhooks.
-    Queues messages as Jobs, provides templating with safe context rendering,
-    and ensures reliable delivery via retries and DLQs (dead-letter queues).
-    Notifications must be idempotent and keep delivery logs for audit.
+    Messaging and notification service for async delivery.
+    
+    Handles all outbound notifications through queue-based
+    delivery with retry logic and audit trails.
     """
     
     def __init__(self, job_repository, email_provider=None, sms_provider=None):

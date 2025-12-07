@@ -3,15 +3,29 @@ from decimal import Decimal
 from Models.Refund import Refund
 
 class PaymentService:
-    """Payment service with minimal working implementations for tests."""
+    """Payment service for payment intents, captures, and stored methods."""
     
-    def __init__(self, payment_repository, payment_gateway=None):
+    def __init__(self, payment_repository, payment_method_repository=None, payment_gateway=None):
         self.payment_repository = payment_repository
+        self.payment_method_repository = payment_method_repository
         self.payment_gateway = payment_gateway
     
-    async def create_payment_intent(self, order_id: int, amount_cents: int, currency: str, method: dict) -> dict:
-        """Create payment intent."""
+    async def create_payment_intent(self, order_id: int, amount_cents: int, currency: str, payment_method_id: Optional[int] = None, method: dict = None) -> dict:
+        """
+        Create payment intent (authorization before payment).
+        This reserves funds but doesn't charge the customer yet.
+        """
         from Models.Payment import Payment, PaymentStatus, PaymentMethod
+        
+        gateway_token = None
+        payment_method_type = PaymentMethod.CREDIT_CARD
+        
+        # If using stored payment method, retrieve gateway token
+        if payment_method_id and self.payment_method_repository:
+            stored_method = await self.payment_method_repository.get_by_id(payment_method_id)
+            if stored_method:
+                gateway_token = stored_method.gateway_token
+                payment_method_type = PaymentMethod.CREDIT_CARD  # Or map from stored_method.card_brand
         
         # Call gateway if available
         gateway_response = {}
@@ -19,13 +33,14 @@ class PaymentService:
             gateway_response = self.payment_gateway.create_intent(
                 amount=amount_cents,
                 currency=currency,
+                payment_method=gateway_token,
                 metadata={"order_id": order_id}
             )
         
         payment = Payment(
             order_id=order_id,
             amount_cents=amount_cents,
-            method=PaymentMethod.CREDIT_CARD,
+            method=payment_method_type,
             status=PaymentStatus.PENDING,
             transaction_id=gateway_response.get("gateway_id", f"pi_{order_id}_test")
         )
@@ -47,11 +62,17 @@ class PaymentService:
         return result
     
     async def capture_payment(self, payment_id: int, amount_cents: Optional[int] = None) -> dict:
-        """Capture authorized payment."""
+        """
+        Capture authorized payment (complete the charge).
+        This actually charges the customer after payment intent was created.
+        """
         from Models.Payment import PaymentStatus
         payment = await self.payment_repository.get_by_id(payment_id)
         if not payment:
             raise ValueError("Payment not found")
+        
+        if payment.status != PaymentStatus.PENDING:
+            raise ValueError(f"Cannot capture payment with status {payment.status}")
         
         capture_amount = amount_cents or payment.amount_cents
         
@@ -62,13 +83,52 @@ class PaymentService:
                 amount=capture_amount
             )
         
-        payment.status = PaymentStatus.AUTHORIZED
+        payment.status = PaymentStatus.COMPLETED  # Changed to COMPLETED after successful capture
         await self.payment_repository.update(payment)
         
         return {
             'payment_id': payment.id,
             'status': 'captured',
             'captured_amount_cents': capture_amount
+        }
+    
+    async def charge_stored_payment_method(self, user_id: int, amount_cents: int, currency: str, order_id: int, payment_method_id: Optional[int] = None) -> dict:
+        """
+        Charge a stored payment method directly (for subscriptions, recurring charges).
+        Combines create_intent + capture into one step.
+        """
+        # Get payment method (use default if not specified)
+        if payment_method_id:
+            stored_method = await self.payment_method_repository.get_by_id(payment_method_id)
+        else:
+            stored_method = await self.payment_method_repository.get_default_for_user(user_id)
+        
+        if not stored_method:
+            raise ValueError("No payment method found")
+        
+        if not stored_method.is_active:
+            raise ValueError("Payment method is inactive")
+        
+        # Create payment intent with stored method
+        intent = await self.create_payment_intent(
+            order_id=order_id,
+            amount_cents=amount_cents,
+            currency=currency,
+            payment_method_id=stored_method.id
+        )
+        
+        # Immediately capture the payment
+        capture_result = await self.capture_payment(intent['payment_id'], amount_cents)
+        
+        return {
+            'payment_id': intent['payment_id'],
+            'status': 'completed',
+            'amount_cents': amount_cents,
+            'currency': currency,
+            'payment_method': {
+                'brand': stored_method.card_brand,
+                'last_four': stored_method.card_last_four
+            }
         }
     
     async def refund_payment(self, payment_id: int, amount_cents: Optional[int] = None, reason: Optional[str] = None) -> dict:

@@ -74,39 +74,4 @@ class SimpleInventoryService:
         product.stock_quantity += qty
         await self.product_repository.update(product)
         return True
-    
-    async def get_low_stock_products(self, threshold: int = 10) -> List:
-        """
-        Get products with stock below threshold.
-        """
-        from sqlalchemy import select
-        from Models.Product import Product
-        
-        stmt = select(Product).where(Product.stock_quantity < threshold)
-        result = await self.product_repository.db.execute(stmt)
-        products = result.scalars().all()
-        return list(products)
-    
-    async def batch_reserve_stock(self, items: List[tuple]) -> bool:
-        """
-        Reserve stock for multiple products atomically.
-        items: List of (product_id, quantity) tuples
-        Returns True if all succeeded, False if any failed (no changes made).
-        """
-        # Check all products first
-        products_to_update = []
-        for product_id, qty in items:
-            product = await self.product_repository.get_by_id(product_id)
-            if not product:
-                return False  # Product not found
-            if product.stock_quantity < qty:
-                return False  # Insufficient stock - no changes made
-            products_to_update.append((product, qty))
-        
-        # Reserve all (only if all checks passed)
-        for product, qty in products_to_update:
-            product.stock_quantity -= qty
-            await self.product_repository.update(product)
-        
-        return True
-        return True
+

@@ -405,6 +405,14 @@ class TestSchedulingService:
         start_date = date.today() + timedelta(days=1)
         end_date = start_date + timedelta(days=14)
         
+        # Calculate expected number of weekdays
+        expected_count = 0
+        check_date = start_date
+        while check_date <= end_date:
+            if check_date.weekday() in [0, 1, 2, 3, 4]:  # Monday-Friday
+                expected_count += 1
+            check_date += timedelta(days=1)
+        
         # Create recurring shifts (Monday-Friday)
         shifts = await service.create_recurring_shifts(
             employee_id=employee.id,
@@ -416,7 +424,7 @@ class TestSchedulingService:
             days_of_week=[0, 1, 2, 3, 4]  # Monday-Friday
         )
         
-        assert len(shifts) == 11  # Should create 11 weekday shifts
+        assert len(shifts) == expected_count  # Should create correct number of weekday shifts
         assert all(s.employee_id == employee.id for s in shifts)
     
     async def test_update_shift_time(self, db_session, create_test_employee):

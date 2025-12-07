@@ -65,6 +65,7 @@ class Category(Base):
     parent = relationship("Category", remote_side=[id], back_populates="children")
     children = relationship("Category", back_populates="parent", cascade="all")
     products = relationship("Product", back_populates="category")
+    subcategories = relationship("Subcategory", back_populates="category", cascade="all, delete-orphan")
     
     __table_args__ = (
         CheckConstraint("length(trim(name)) > 0", name='check_name_present'),

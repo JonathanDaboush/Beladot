@@ -96,20 +96,7 @@ class CatalogService:
         })
         return {'products': products}
     
-    async def get_product_by_slug(self, slug: str, actor_id=None):
-        db_prod = await self.product_repo.get_by_slug(slug)
-        if not db_prod:
-            return None
-        variants, total_qty = await self.product_repo.get_variants_and_total_quantity(db_prod.id)
-        images = await self.image_repo.get_by_product(db_prod.id)
-        await self.audit_repo.create({
-            'actor_id': actor_id,
-            'action': 'get_product_by_slug',
-            'target_type': 'product',
-            'target_id': db_prod.id,
-            'metadata': {'slug': slug}
-        })
-        return {'product': db_prod, 'variants': variants, 'images': images, 'total_quantity': total_qty}
+    # get_product_by_slug removed - use get_product_by_id or list_products instead
     
     async def create_variant(self, product_id: UUID, variant_payload: dict, actor_id=None):
         variant_payload['product_id'] = product_id

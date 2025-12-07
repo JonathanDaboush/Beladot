@@ -83,7 +83,7 @@ async def create_tables():
             print("Creating enum types...")
             # Create enum types before tables to avoid CHECK constraint errors
             await conn.execute(text("""
-                CREATE TYPE userrole AS ENUM ('admin', 'customer', 'support')
+                CREATE TYPE userrole AS ENUM ('customer', 'customer_service', 'seller', 'transfer', 'finance', 'admin')
             """))
             await conn.execute(text("""
                 CREATE TYPE orderstatus AS ENUM ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded')

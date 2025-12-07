@@ -1,3 +1,39 @@
+"""
+Search Service - Product Discovery and Indexing
+===============================================
+
+Provides product search functionality with:
+- Full-text search across product fields
+- Filtering by price, stock, category
+- Variant-level search results
+- Relevance ranking (future: ML-based)
+- Faceted search support
+- Search index synchronization
+
+Search Strategy:
+    - Primary: Search index provider (Elasticsearch, Algolia, etc.)
+    - Fallback: Direct database queries for reliability
+    - Indexing: Async jobs keep search index in sync
+    - Tolerance: Handles indexing delays gracefully
+
+Search Fields:
+    - Product: name, description, short_description, slug
+    - Category: name, parent category name
+    - Variant: name, SKU, attributes
+
+Filters Supported:
+    - in_stock: Show only available items
+    - min_price/max_price: Price range filtering
+    - category_id: Category filtering
+    - attributes: Variant attribute filtering
+
+Dependencies:
+    - ProductRepository: Product data access
+    - SearchIndexProvider: Search engine integration
+
+Author: Jonathan Daboush
+Version: 2.0.0
+"""
 from typing import Any
 from uuid import UUID
 
@@ -6,11 +42,11 @@ from Ecommerce.backend.Repositories import ProductRepository as productrepositor
 
 class SearchService:
     """
-    Product Search and Indexing Service
-    Indexing and query layer for product discovery with support for faceting and relevance.
-    Keeps a product/variant index in sync with catalog updates (via jobs),
-    offers consistent paginated queries, and supports business boosts (promotions, stock availability).
-    Search must be tolerant to indexing delays with fallback to DB queries.
+    Product search and indexing service.
+    
+    Provides full-text search across products with filtering,
+    pagination, and relevance ranking. Supports both indexed
+    search (fast) and database fallback (reliable).
     """
     
     def __init__(self, product_repository, search_index_provider):

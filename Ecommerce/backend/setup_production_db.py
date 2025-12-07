@@ -101,7 +101,7 @@ async def create_enums():
     print("\nCreating/updating enum types...")
     
     enums_to_create = {
-        'userrole': ['admin', 'customer', 'support'],
+        'userrole': ['customer', 'customer_service', 'seller', 'transfer', 'finance', 'admin'],
         'orderstatus': ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
         'shipmentstatus': ['pending', 'picked', 'packed', 'shipped', 'in_transit', 'out_for_delivery', 'delivered', 'failed'],
         'paymentstatus': ['pending', 'authorized', 'captured', 'failed', 'refunded', 'partially_refunded', 'cancelled'],

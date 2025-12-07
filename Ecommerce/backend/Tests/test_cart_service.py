@@ -305,9 +305,11 @@ class TestCartService:
         user = await user_repo.create(user)
         
         # Create guest session
+        from datetime import datetime, timedelta
         session = Session(
             session_token="guest_session_123",
-            user_id=None
+            user_id=None,
+            expires_at=datetime.utcnow() + timedelta(days=30)
         )
         session = await session_repo.create(session)
         

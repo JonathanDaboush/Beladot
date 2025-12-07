@@ -1,0 +1,859 @@
+"""
+FastAPI E-Commerce Backend Application
+
+Production-ready API with comprehensive security:
+- JWT Authentication & Authorization
+- Input Validation (Pydantic)
+- Rate Limiting
+- CSRF Protection
+- Security Headers
+- CORS Configuration
+"""
+from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timedelta
+import logging
+
+from config import Settings
+from database import get_db, engine
+from schemas import (
+    UserRegisterRequest, UserLoginRequest, UserResponse,
+    TokenResponse, RefreshTokenRequest,
+    CartResponse, AddToCartRequest, MessageResponse,
+    ProductResponse, ProductCreateRequest, PaginationParams,
+    OrderResponse, CreateOrderRequest
+)
+from Utilities.auth import (
+    create_access_token, 
+    create_refresh_token,
+    get_current_user,
+    get_current_active_user,
+    get_current_admin_user,
+    get_current_employee,
+    get_current_seller,
+    get_current_transfer_user,
+    verify_token
+)
+from Utilities.rate_limiting import (
+    rate_limiter_moderate,
+    rate_limiter_auth,
+    rate_limiter_register,
+    cleanup_rate_limit_store
+)
+from Utilities.csrf_protection import (
+    generate_csrf_token,
+    verify_csrf_token,
+    cleanup_expired_tokens
+)
+from Utilities.input_sanitization import sanitize_string
+
+# Import services
+from Services.UserService import UserService
+from Services.CartService import CartService
+from Services.CheckoutService import CheckoutService
+from Services.ProductService import ProductService
+from Services.OrderService import OrderService
+
+# Import repositories
+from Repositories.UserRepository import UserRepository
+from Repositories.CartRepository import CartRepository
+from Repositories.ProductRepository import ProductRepository
+from Repositories.OrderRepository import OrderRepository
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+settings = Settings()
+
+# ============================================================================
+# Application Setup
+# ============================================================================
+
+app = FastAPI(
+    title="E-Commerce API",
+    description="Secure e-commerce backend with comprehensive security features",
+    version="1.0.0",
+    docs_url="/api/docs" if settings.DEBUG else None,  # Disable in production
+    redoc_url="/api/redoc" if settings.DEBUG else None,
+)
+
+
+# ============================================================================
+# Security Middleware
+# ============================================================================
+
+# CORS Configuration
+allowed_origins = settings.CORS_ORIGINS.split(',')
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["*"],
+    expose_headers=["X-CSRF-Token"],
+)
+
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    
+    # Prevent clickjacking
+    response.headers["X-Frame-Options"] = "DENY"
+    
+    # Prevent MIME sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    
+    # XSS Protection
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    
+    # Content Security Policy
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        "connect-src 'self';"
+    )
+    
+    # HTTPS enforcement (if not in debug mode)
+    if not settings.DEBUG:
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+    
+    # Referrer Policy
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
+    # Permissions Policy
+    response.headers["Permissions-Policy"] = (
+        "geolocation=(), microphone=(), camera=(), payment=(self)"
+    )
+    
+    return response
+
+
+# Request ID Middleware (for logging/debugging)
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    """Add unique request ID for tracing."""
+    import uuid
+    request_id = str(uuid.uuid4())
+    request.state.request_id = request_id
+    
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    
+    return response
+
+
+# ============================================================================
+# Startup/Shutdown Events
+# ============================================================================
+
+@app.on_event("startup")
+async def startup_event():
+    """Run on application startup."""
+    logger.info("Starting E-Commerce API...")
+    
+    # Security checks
+    if settings.DEBUG:
+        logger.warning("⚠️  DEBUG mode is enabled - disable in production!")
+    
+    if settings.SECRET_KEY == "your-secret-key-here":
+        logger.error("❌ Using default SECRET_KEY - change immediately!")
+        raise ValueError("Default SECRET_KEY not allowed in production")
+    
+    logger.info("✅ Security checks passed")
+    logger.info(f"✅ CORS origins: {allowed_origins}")
+    logger.info("✅ Application started successfully")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Run on application shutdown."""
+    logger.info("Shutting down E-Commerce API...")
+    await engine.dispose()
+    logger.info("✅ Cleanup complete")
+
+
+# ============================================================================
+# Health Check
+# ============================================================================
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Health check endpoint (no authentication required)."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+
+
+@app.get("/", tags=["Root"])
+async def root():
+    """Root endpoint."""
+    return {
+        "message": "E-Commerce API",
+        "docs": "/api/docs" if settings.DEBUG else "Documentation disabled in production",
+        "version": "1.0.0"
+    }
+
+
+# ============================================================================
+# Authentication Endpoints
+# ============================================================================
+
+@app.post("/api/auth/register", response_model=UserResponse, tags=["Authentication"])
+async def register_user(
+    user_data: UserRegisterRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Register new user account.
+    
+    Security:
+    - Rate limited: 3 registrations per hour per IP
+    - Password strength validation
+    - Email format validation
+    """
+    # Rate limiting
+    await rate_limiter_register.check_rate_limit(request)
+    
+    # Check if user exists
+    user_repo = UserRepository(db)
+    existing_user = await user_repo.get_by_email(user_data.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    
+    # Create user via service
+    user_service = UserService(db)
+    new_user = await user_service.create_user(
+        email=user_data.email,
+        password=user_data.password,
+        first_name=sanitize_string(user_data.first_name),
+        last_name=sanitize_string(user_data.last_name),
+        phone=user_data.phone,
+        role=user_data.role  # Include role from request
+    )
+    
+    logger.info(f"New user registered: {new_user.email}")
+    
+    return new_user
+
+
+@app.post("/api/auth/login", response_model=TokenResponse, tags=["Authentication"])
+async def login_user(
+    credentials: UserLoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Authenticate user and return JWT tokens.
+    
+    Security:
+    - Rate limited: 5 attempts per 5 minutes per IP
+    - Returns access token (30 min) and refresh token (7 days)
+    - CSRF token included in response
+    """
+    # Rate limiting
+    await rate_limiter_auth.check_rate_limit(request)
+    
+    # Authenticate user
+    user_service = UserService(db)
+    user = await user_service.authenticate_user(
+        email=credentials.email,
+        password=credentials.password
+    )
+    
+    if not user:
+        # Generic error message to prevent user enumeration
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
+    
+    # Generate tokens
+    access_token = create_access_token({"sub": str(user.id)})
+    refresh_token = create_refresh_token({"sub": str(user.id)})
+    
+    # Generate CSRF token
+    csrf_token = generate_csrf_token(str(user.id))
+    
+    logger.info(f"User logged in: {user.email}")
+    
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+
+
+@app.post("/api/auth/refresh", response_model=TokenResponse, tags=["Authentication"])
+async def refresh_access_token(
+    refresh_request: RefreshTokenRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Refresh access token using refresh token.
+    
+    Security:
+    - Validates refresh token type
+    - Issues new access token (refresh token unchanged)
+    """
+    # Verify refresh token
+    payload = verify_token(refresh_request.refresh_token)
+    
+    if not payload or payload.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+    
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload"
+        )
+    
+    # Verify user still exists
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_id(int(user_id))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+    
+    # Generate new access token
+    access_token = create_access_token({"sub": user_id})
+    
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_request.refresh_token,  # Keep same refresh token
+        token_type="bearer",
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    )
+
+
+@app.get("/api/auth/csrf-token", tags=["Authentication"])
+async def get_csrf_token(current_user=Depends(get_current_user)):
+    """
+    Get CSRF token for authenticated user.
+    
+    Required for state-changing operations (POST, PUT, DELETE).
+    Include in X-CSRF-Token header.
+    """
+    csrf_token = generate_csrf_token(str(current_user.id))
+    return {"csrf_token": csrf_token}
+
+
+@app.get("/api/auth/me", response_model=UserResponse, tags=["Authentication"])
+async def get_current_user_info(current_user=Depends(get_current_active_user)):
+    """Get current authenticated user information."""
+    return current_user
+
+
+# ============================================================================
+# Cart Endpoints (Protected)
+# ============================================================================
+
+@app.get("/api/cart", response_model=CartResponse, tags=["Cart"])
+async def get_cart(
+    request: Request,
+    current_user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get user's shopping cart.
+    
+    Security: Requires authentication
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    cart_service = CartService(db)
+    cart = await cart_service.get_or_create_cart(current_user.id)
+    
+    return cart
+
+
+@app.post("/api/cart/items", response_model=MessageResponse, tags=["Cart"])
+async def add_to_cart(
+    item: AddToCartRequest,
+    request: Request,
+    current_user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Add item to cart.
+    
+    Security:
+    - Requires authentication
+    - CSRF protection
+    - Input validation
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    cart_service = CartService(db)
+    await cart_service.add_item(
+        user_id=current_user.id,
+        product_variant_id=item.product_variant_id,
+        quantity=item.quantity
+    )
+    
+    return MessageResponse(message="Item added to cart successfully")
+
+
+# ============================================================================
+# Product Endpoints (Public + Protected)
+# ============================================================================
+
+@app.get("/api/products", tags=["Products"])
+async def list_products(
+    request: Request,
+    page: int = 1,
+    page_size: int = 20,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List products (public endpoint).
+    
+    Security: Rate limited
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    # Validate pagination
+    pagination = PaginationParams(page=page, page_size=page_size)
+    
+    product_repo = ProductRepository(db)
+    products = await product_repo.get_all(
+        offset=pagination.offset,
+        limit=pagination.page_size
+    )
+    
+    return {"products": products, "page": page, "page_size": page_size}
+
+
+@app.post("/api/products", response_model=ProductResponse, tags=["Products"])
+async def create_product(
+    product_data: ProductCreateRequest,
+    request: Request,
+    seller=Depends(get_current_seller),  # Changed: Sellers can create products
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create new product (seller or admin).
+    
+    Security:
+    - Seller or admin authentication required
+    - Input validation
+    - CSRF protection
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    product_service = ProductService(db)
+    new_product = await product_service.create_product(
+        name=sanitize_string(product_data.name),
+        description=sanitize_string(product_data.description),
+        price=product_data.price,
+        cost=product_data.cost,
+        sku=product_data.sku,
+        category_id=product_data.category_id,
+        seller_id=product_data.seller_id,
+        stock_quantity=product_data.stock_quantity
+    )
+    
+    logger.info(f"Product created by {seller.role} {seller.id}: {new_product.name}")
+    
+    return new_product
+
+
+# ============================================================================
+# Order Endpoints (Protected)
+# ============================================================================
+
+@app.post("/api/orders", response_model=OrderResponse, tags=["Orders"])
+async def create_order(
+    order_data: CreateOrderRequest,
+    request: Request,
+    current_user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create order from cart.
+    
+    Security:
+    - Authentication required
+    - CSRF protection
+    - Input validation
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    checkout_service = CheckoutService(db)
+    order = await checkout_service.create_order_from_cart(
+        user_id=current_user.id,
+        shipping_address_id=order_data.shipping_address_id,
+        billing_address_id=order_data.billing_address_id,
+        payment_method=order_data.payment_method,
+        coupon_code=order_data.coupon_code
+    )
+    
+    logger.info(f"Order created by user {current_user.id}: {order.order_number}")
+    
+    return order
+
+
+@app.get("/api/orders", tags=["Orders"])
+async def list_user_orders(
+    request: Request,
+    current_user=Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get user's order history."""
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    order_repo = OrderRepository(db)
+    orders = await order_repo.get_by_user_id(current_user.id)
+    
+    return {"orders": orders}
+
+
+# ============================================================================
+# Employee Routes (Payroll & Time Tracking)
+# ============================================================================
+
+@app.post("/api/employee/clock-in", response_model=MessageResponse, tags=["Employee"])
+async def clock_in(
+    request: Request,
+    employee=Depends(get_current_employee),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Clock in for shift.
+    
+    Security: Employee, seller (if also employee), or admin access required
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    from Services.TimeTrackingService import TimeTrackingService
+    time_service = TimeTrackingService(db)
+    
+    # Get employee_id from Employee table (linked to user)
+    from Repositories.EmployeeRepository import EmployeeRepository
+    employee_repo = EmployeeRepository(db)
+    employee_record = await employee_repo.get_by_user_id(employee.id)
+    
+    if not employee_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee record not found. Contact admin."
+        )
+    
+    await time_service.clock_in(employee_record.id)
+    logger.info(f"Employee {employee_record.id} clocked in")
+    
+    return MessageResponse(message="Clocked in successfully")
+
+
+@app.post("/api/employee/clock-out", response_model=MessageResponse, tags=["Employee"])
+async def clock_out(
+    break_minutes: int = 0,
+    request: Request = None,
+    employee=Depends(get_current_employee),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Clock out from shift.
+    
+    Security: Employee, seller (if also employee), or admin access required
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    from Services.TimeTrackingService import TimeTrackingService
+    time_service = TimeTrackingService(db)
+    
+    from Repositories.EmployeeRepository import EmployeeRepository
+    employee_repo = EmployeeRepository(db)
+    employee_record = await employee_repo.get_by_user_id(employee.id)
+    
+    if not employee_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee record not found"
+        )
+    
+    await time_service.clock_out(employee_record.id, break_minutes)
+    logger.info(f"Employee {employee_record.id} clocked out")
+    
+    return MessageResponse(message="Clocked out successfully")
+
+
+@app.get("/api/employee/hours", tags=["Employee"])
+async def get_employee_hours(
+    request: Request,
+    employee=Depends(get_current_employee),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get employee hours worked."""
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    from Repositories.EmployeeRepository import EmployeeRepository
+    from Repositories.HoursWorkedRepository import HoursWorkedRepository
+    
+    employee_repo = EmployeeRepository(db)
+    employee_record = await employee_repo.get_by_user_id(employee.id)
+    
+    if not employee_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Employee record not found"
+        )
+    
+    hours_repo = HoursWorkedRepository(db)
+    hours = await hours_repo.get_by_employee_id(employee_record.id)
+    
+    return {"hours": hours}
+
+
+# ============================================================================
+# Seller Routes (Product Management & Sales)
+# ============================================================================
+
+@app.get("/api/seller/sales", tags=["Seller"])
+async def get_seller_sales(
+    request: Request,
+    seller=Depends(get_current_seller),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get sales data for seller.
+    
+    Security: Seller or admin access required
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    from Repositories.SellerRepository import SellerRepository
+    from Repositories.OrderRepository import OrderRepository
+    
+    seller_repo = SellerRepository(db)
+    seller_record = await seller_repo.get_by_user_id(seller.id)
+    
+    if not seller_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Seller profile not found"
+        )
+    
+    # Get orders containing seller's products
+    order_repo = OrderRepository(db)
+    # This would need a custom query - placeholder for now
+    sales_data = {
+        "seller_id": seller_record.id,
+        "message": "Sales tracking to be implemented"
+    }
+    
+    return sales_data
+
+
+@app.get("/api/seller/products", tags=["Seller"])
+async def get_seller_products(
+    request: Request,
+    seller=Depends(get_current_seller),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get products owned by seller."""
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    from Repositories.SellerRepository import SellerRepository
+    from Repositories.ProductRepository import ProductRepository
+    
+    seller_repo = SellerRepository(db)
+    seller_record = await seller_repo.get_by_user_id(seller.id)
+    
+    if not seller_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Seller profile not found"
+        )
+    
+    product_repo = ProductRepository(db)
+    products = await product_repo.get_by_seller_id(seller_record.id)
+    
+    return {"products": products}
+
+
+# ============================================================================
+# Transfer Routes (Inventory Import/Export)
+# ============================================================================
+
+@app.post("/api/transfer/import", response_model=MessageResponse, tags=["Transfer"])
+async def import_inventory(
+    request: Request,
+    transfer_user=Depends(get_current_transfer_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Import inventory (transfer role only).
+    
+    Security: Transfer role or admin access required
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    # Placeholder for inventory import logic
+    logger.info(f"Inventory import initiated by {transfer_user.role} {transfer_user.id}")
+    
+    return MessageResponse(message="Inventory import functionality to be implemented")
+
+
+@app.post("/api/transfer/export", response_model=MessageResponse, tags=["Transfer"])
+async def export_inventory(
+    request: Request,
+    transfer_user=Depends(get_current_transfer_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Export inventory (transfer role only).
+    
+    Security: Transfer role or admin access required
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    # Placeholder for inventory export logic
+    logger.info(f"Inventory export initiated by {transfer_user.role} {transfer_user.id}")
+    
+    return MessageResponse(message="Inventory export functionality to be implemented")
+
+
+@app.get("/api/transfer/movements", tags=["Transfer"])
+async def get_inventory_movements(
+    request: Request,
+    transfer_user=Depends(get_current_transfer_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get inventory movement history."""
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    from Repositories.InventoryTransactionRepository import InventoryTransactionRepository
+    
+    inventory_repo = InventoryTransactionRepository(db)
+    transactions = await inventory_repo.get_all()
+    
+    return {"transactions": transactions}
+
+
+# ============================================================================
+# Admin Routes (Full Access)
+# ============================================================================
+
+@app.get("/api/admin/users", tags=["Admin"])
+async def list_all_users(
+    request: Request,
+    admin=Depends(get_current_admin_user),
+    page: int = 1,
+    page_size: int = 20,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List all users (admin only).
+    
+    Security: Admin access required
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    pagination = PaginationParams(page=page, page_size=page_size)
+    
+    user_repo = UserRepository(db)
+    users = await user_repo.get_all(
+        offset=pagination.offset,
+        limit=pagination.page_size
+    )
+    
+    return {"users": users, "page": page, "page_size": page_size}
+
+
+@app.delete("/api/admin/users/{user_id}", response_model=MessageResponse, tags=["Admin"])
+async def delete_user(
+    user_id: int,
+    request: Request,
+    admin=Depends(get_current_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete user (admin only).
+    
+    Security: Admin access required
+    """
+    await rate_limiter_moderate.check_rate_limit(request)
+    
+    user_repo = UserRepository(db)
+    await user_repo.delete(user_id)
+    
+    logger.info(f"User {user_id} deleted by admin {admin.id}")
+    
+    return MessageResponse(message=f"User {user_id} deleted successfully")
+
+
+# ============================================================================
+# Error Handlers
+# ============================================================================
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Custom HTTP exception handler."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "detail": exc.detail,
+            "request_id": getattr(request.state, 'request_id', None)
+        }
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """Catch-all exception handler."""
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    
+    # Don't expose internal errors in production
+    if settings.DEBUG:
+        detail = str(exc)
+    else:
+        detail = "Internal server error"
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": detail,
+            "request_id": getattr(request.state, 'request_id', None)
+        }
+    )
+
+
+# ============================================================================
+# Run Application
+# ============================================================================
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    uvicorn.run(
+        "app:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.DEBUG,
+        log_level="info"
+    )

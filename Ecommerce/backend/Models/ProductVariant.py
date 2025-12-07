@@ -82,9 +82,16 @@ class ProductVariant(Base):
     inventory_management = Column(String(50), nullable=True)
     inventory_policy = Column(String(20), default="deny", nullable=False)
     track_stock = Column(Boolean, default=True, nullable=False)
+    
+    # Optional variant-specific categorization (e.g., T-Shirt Colors -> Green)
+    variant_category_id = Column(Integer, ForeignKey("variant_categories.id", ondelete="SET NULL"), nullable=True, index=True)
+    variant_subcategory_id = Column(Integer, ForeignKey("variant_subcategories.id", ondelete="SET NULL"), nullable=True, index=True)
+    
     # Option fields removed; now handled by OptionCategory/OptionValue
     
     product = relationship("Product", back_populates="variants")
+    variant_category = relationship("VariantCategory", back_populates="variants")
+    variant_subcategory = relationship("VariantSubcategory", back_populates="variants")
     
     __table_args__ = (
         CheckConstraint("length(trim(sku)) > 0", name='check_sku_present'),

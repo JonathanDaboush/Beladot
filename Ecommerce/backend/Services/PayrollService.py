@@ -44,6 +44,11 @@ class PayrollService:
         """
         Calculate paycheck for an employee for a pay period.
         
+        INCLUDES PTO/SICK DEDUCTIONS:
+        - Deducts approved PTO hours from regular hours
+        - Deducts approved sick leave hours from regular hours
+        - Both reduce the paycheck since they're not paid work hours
+        
         Returns breakdown of gross pay, deductions, and net pay.
         """
         # Get employee financial info
@@ -61,15 +66,38 @@ class PayrollService:
         # Validate hours are not negative
         if hours_data["regular_hours"] < 0 or hours_data["overtime_hours"] < 0:
             raise ValueError("Hours cannot be negative")
-        if not financial:
-            raise ValueError(f"No financial information found for employee {employee_id}")
         
-        # Get hours worked for pay period
-        hours_data = await self.hours_repo.calculate_total_hours(
-            employee_id,
-            start_date,
-            end_date
+        # Get approved PTO hours in this pay period
+        from sqlalchemy import select, func
+        from Models.PaidTimeOff import PaidTimeOff
+        result = await self.session.execute(
+            select(func.sum(PaidTimeOff.hours))
+            .where(PaidTimeOff.employee_id == employee_id)
+            .where(PaidTimeOff.date_used >= start_date)
+            .where(PaidTimeOff.date_used <= end_date)
+            .where(PaidTimeOff.approved == True)
         )
+        pto_hours = result.scalar() or Decimal("0")
+        
+        # Get approved sick leave hours in this pay period
+        from Models.PaidSick import PaidSick
+        result = await self.session.execute(
+            select(func.sum(PaidSick.hours))
+            .where(PaidSick.employee_id == employee_id)
+            .where(PaidSick.date_used >= start_date)
+            .where(PaidSick.date_used <= end_date)
+            .where(PaidSick.approved == True)
+        )
+        sick_hours = result.scalar() or Decimal("0")
+        
+        # DEDUCT PTO/SICK FROM REGULAR HOURS
+        # These are unpaid leave hours that reduce the paycheck
+        original_regular_hours = Decimal(str(hours_data["regular_hours"]))
+        adjusted_regular_hours = original_regular_hours - pto_hours - sick_hours
+        
+        # Ensure non-negative
+        if adjusted_regular_hours < 0:
+            adjusted_regular_hours = Decimal("0")
         
         # Create business logic instance
         financial_class = EmployeeFinancialClass(
@@ -81,9 +109,9 @@ class PayrollService:
             payment_method=financial.payment_method.value
         )
         
-        # Calculate gross pay
+        # Calculate gross pay with ADJUSTED hours (after PTO/sick deductions)
         gross_pay = financial_class.calculate_gross_pay(
-            regular_hours=Decimal(str(hours_data["regular_hours"])),
+            regular_hours=adjusted_regular_hours,
             overtime_hours=Decimal(str(hours_data["overtime_hours"])),
             overtime_multiplier=financial.overtime_rate_multiplier
         )
@@ -113,18 +141,26 @@ class PayrollService:
             other_deductions
         )
         
-        # Add pay period info
+        # Add pay period info WITH PTO/SICK BREAKDOWN
         net_pay_breakdown.update({
             "employee_id": employee_id,
             "pay_period_start": start_date.isoformat(),
             "pay_period_end": end_date.isoformat(),
             "hours_breakdown": hours_data,
+            "pto_hours_deducted": float(pto_hours),
+            "sick_hours_deducted": float(sick_hours),
+            "original_regular_hours": float(original_regular_hours),
+            "adjusted_regular_hours": float(adjusted_regular_hours),
             "pay_rate": float(financial.pay_rate),
             "is_salary": financial.is_salary,
             "overtime_pay": overtime_pay
         })
         
-        logger.info(f"Calculated paycheck for employee {employee_id}: ${net_pay_breakdown['net_pay']}")
+        logger.info(
+            f"Calculated paycheck for employee {employee_id}: "
+            f"${net_pay_breakdown['net_pay']} "
+            f"(PTO: {pto_hours}h, Sick: {sick_hours}h deducted)"
+        )
         
         return net_pay_breakdown
     
