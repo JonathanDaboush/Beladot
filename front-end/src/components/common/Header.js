@@ -2,6 +2,8 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar, Container, Nav, NavDropdown, Badge, Button } from 'react-bootstrap';
 import { useAuth } from '../../contexts/AuthContext';
+import RoleSwitcher from '../admin/RoleSwitcher';
+import { isAdmin } from '../../utils/roleHelper';
 
 const Header = () => {
   const { user, isAuthenticated, logout, currentView, getAvailableViews, switchView } = useAuth();
@@ -35,7 +37,10 @@ const Header = () => {
   const currentViewIcon = availableViews.find(v => v.value === currentView)?.icon || '🏠';
 
   return (
-    <Navbar bg="dark" variant="dark" expand="lg" sticky="top">
+    <>
+      {isAuthenticated && isAdmin(user?.role) && <RoleSwitcher />}
+      
+      <Navbar bg="dark" variant="dark" expand="lg" sticky="top">
       <Container fluid>
         <Navbar.Brand as={Link} to="/" className="fw-bold">
           Beladot
@@ -131,6 +136,7 @@ const Header = () => {
         </Navbar.Collapse>
       </Container>
     </Navbar>
+    </>
   );
 };
 

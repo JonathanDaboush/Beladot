@@ -3,75 +3,132 @@ import api from './api';
 /**
  * Analyst Service
  * Read-only analytics, reports, data visualization (ANALYST role)
+ * Routes from /api/analyst endpoint
  * ZERO write access, only aggregate data
  */
 const analystService = {
-  // Get business metrics
-  getBusinessMetrics: async (period = 'month') => {
-    const response = await api.get(`/analytics/metrics?period=${period}`);
+  // === SYSTEM OVERVIEW ===
+  
+  // Get comprehensive system overview
+  getSystemOverview: async () => {
+    const response = await api.get('/analyst/system/overview');
     return response.data;
   },
 
-  // Get sales analytics
-  getSalesAnalytics: async (startDate, endDate, groupBy = 'day') => {
-    const params = new URLSearchParams({
-      start_date: startDate,
-      end_date: endDate,
-      group_by: groupBy,
-    });
-    const response = await api.get(`/analytics/sales?${params}`);
-    return response.data;
-  },
-
-  // Get product analytics
-  getProductAnalytics: async (filters = {}) => {
-    const params = new URLSearchParams(filters);
-    const response = await api.get(`/analytics/products?${params}`);
-    return response.data;
-  },
-
-  // Get customer analytics
-  getCustomerAnalytics: async (filters = {}) => {
-    const params = new URLSearchParams(filters);
-    const response = await api.get(`/analytics/customers?${params}`);
-    return response.data;
-  },
-
-  // Get revenue reports
-  getRevenueReport: async (startDate, endDate) => {
+  // === SALES ANALYTICS ===
+  
+  // Get sales analytics with detailed breakdown
+  getSalesAnalytics: async (startDate, endDate) => {
     const params = new URLSearchParams({
       start_date: startDate,
       end_date: endDate,
     });
-    const response = await api.get(`/analytics/revenue?${params}`);
+    const response = await api.get(`/analyst/sales/analytics?${params}`);
     return response.data;
   },
 
-  // Generate custom report
-  generateCustomReport: async (reportConfig) => {
-    const response = await api.post('/analyst/reports', reportConfig);
+  // === PRODUCT PERFORMANCE ===
+  
+  // Get product performance metrics
+  getProductPerformance: async (startDate, endDate) => {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+    });
+    const response = await api.get(`/analyst/products/performance?${params}`);
     return response.data;
   },
 
-  // Export data to CSV
-  exportData: async (dataType, filters = {}) => {
-    const params = new URLSearchParams({ type: dataType, ...filters });
-    const response = await api.get(`/analyst/export?${params}`, {
+  // === SELLER PERFORMANCE ===
+  
+  // Get seller performance metrics
+  getSellerPerformance: async (startDate, endDate) => {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+    });
+    const response = await api.get(`/analyst/sellers/performance?${params}`);
+    return response.data;
+  },
+
+  // === EMPLOYEE ANALYTICS ===
+  
+  // Get employee metrics across all departments
+  getEmployeeMetrics: async (startDate, endDate) => {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+    });
+    const response = await api.get(`/analyst/employees/metrics?${params}`);
+    return response.data;
+  },
+
+  // === CUSTOMER BEHAVIOR ===
+  
+  // Get customer behavior analytics
+  getCustomerBehavior: async (startDate, endDate) => {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+    });
+    const response = await api.get(`/analyst/customers/behavior?${params}`);
+    return response.data;
+  },
+
+  // === INVENTORY ANALYTICS ===
+  
+  // Get inventory turnover metrics
+  getInventoryTurnover: async (startDate, endDate) => {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+    });
+    const response = await api.get(`/analyst/inventory/turnover?${params}`);
+    return response.data;
+  },
+
+  // === REVENUE TRENDS ===
+  
+  // Get revenue trend analysis
+  getRevenueTrends: async (startDate, endDate) => {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+    });
+    const response = await api.get(`/analyst/revenue/trends?${params}`);
+    return response.data;
+  },
+
+  // === CUSTOM EXPORTS (CSV/Excel) ===
+  
+  // Export sales data
+  exportSalesData: async (startDate, endDate, format = 'csv') => {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+      format,
+    });
+    const response = await api.get(`/analyst/export/sales?${params}`, {
       responseType: 'blob',
     });
     return response.data;
   },
 
-  // Get dashboard KPIs
-  getDashboardKPIs: async () => {
-    const response = await api.get('/analytics/kpis');
+  // Export product data
+  exportProductData: async (format = 'csv') => {
+    const params = new URLSearchParams({ format });
+    const response = await api.get(`/analyst/export/products?${params}`, {
+      responseType: 'blob',
+    });
     return response.data;
   },
 
-  // Get trend analysis
-  getTrendAnalysis: async (metric, period) => {
-    const params = new URLSearchParams({ metric, period });
-    const response = await api.get(`/analytics/trends?${params}`);
+  // Export customer data
+  exportCustomerData: async (format = 'csv') => {
+    const params = new URLSearchParams({ format });
+    const response = await api.get(`/analyst/export/customers?${params}`, {
+      responseType: 'blob',
+    });
     return response.data;
   },
 };

@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: beladot_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: beladot_user
+      POSTGRES_PASSWORD: beladot_password_2024
+      POSTGRES_DB: beladot_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U beladot_user -d beladot_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend FastAPI
+  backend:
+    build:
+      context: ./Ecommerce/backend
+      dockerfile: Dockerfile
+    container_name: beladot_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://beladot_user:beladot_password_2024@postgres:5432/beladot_db
+      - SECRET_KEY=your-super-secret-key-change-in-production
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=your-email@gmail.com
+      - SMTP_PASSWORD=your-app-password
+      - SMTP_FROM_EMAIL=noreply@beladot.com
+      - SMTP_FROM_NAME=Beladot Marketplace
+      - UPLOAD_DIR=/app/uploads
+      - ENVIRONMENT=development
+    volumes:
+      - ./Ecommerce/backend:/app
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+      alembic upgrade head &&
+      uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./front-end
+      dockerfile: Dockerfile
+    container_name: beladot_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - REACT_APP_API_BASE_URL=http://localhost:8000/api
+      - WATCHPACK_POLLING=true
+    volumes:
+      - ./front-end/src:/app/src
+      - ./front-end/public:/app/public
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  default:
+    name: beladot_network

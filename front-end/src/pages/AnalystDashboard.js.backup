@@ -1,0 +1,128 @@
+import React, { useState } from 'react';
+import { Container, Row, Col, Nav, Alert, Card } from 'react-bootstrap';
+
+/**
+ * Analyst Dashboard (AWS Console style)
+ * Read-only analytics and reports
+ * ZERO write access, only aggregate data
+ * Available to: ANALYST role only
+ */
+const AnalystDashboard = () => {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  return (
+    <Container fluid className="vh-100">
+      <Row className="h-100">
+        {/* Sidebar */}
+        <Col md={3} lg={2} className="bg-dark text-white p-0">
+          <div className="p-3 border-bottom border-secondary">
+            <h4>📊 Analytics</h4>
+          </div>
+          <Nav className="flex-column">
+            <Nav.Link
+              className={`text-white ${activeTab === 'overview' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('overview')}
+            >
+              📈 Overview
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'sales' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('sales')}
+            >
+              💰 Sales Analytics
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'products' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('products')}
+            >
+              📦 Product Analytics
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'customers' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('customers')}
+            >
+              👥 Customer Analytics
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'reports' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('reports')}
+            >
+              📄 Custom Reports
+            </Nav.Link>
+          </Nav>
+        </Col>
+
+        {/* Main Content */}
+        <Col md={9} lg={10} className="p-4">
+          <h1 className="mb-4">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+
+          <Alert variant="info">
+            <strong>ℹ️ Analyst Role:</strong> Read-only access to aggregate
+            business data. NO PII or write operations.
+          </Alert>
+
+          <Card>
+            <Card.Body>
+              {activeTab === 'overview' && (
+                <div>
+                  <h3>Business Overview</h3>
+                  <p>Key performance indicators and metrics</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>📈</div>
+                    <p>Analytics dashboard coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'sales' && (
+                <div>
+                  <h3>Sales Analytics</h3>
+                  <p>Revenue trends, sales by category, and growth metrics</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>💰</div>
+                    <p>Sales analytics interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'products' && (
+                <div>
+                  <h3>Product Analytics</h3>
+                  <p>Top products, inventory turnover, and product performance</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>📦</div>
+                    <p>Product analytics interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'customers' && (
+                <div>
+                  <h3>Customer Analytics</h3>
+                  <p>Aggregate customer behavior and demographics (NO PII)</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>👥</div>
+                    <p>Customer analytics interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'reports' && (
+                <div>
+                  <h3>Custom Reports</h3>
+                  <p>Generate and export custom data reports</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>📄</div>
+                    <p>Report builder coming soon</p>
+                  </div>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
+  );
+};
+
+export default AnalystDashboard;

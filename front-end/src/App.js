@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CartProvider } from './contexts/CartContext';
+import { FeatureFlagProvider } from './contexts/FeatureFlagContext';
 import { ToastProvider } from './contexts/ToastContext';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -143,18 +145,22 @@ const AppContent = () => {
       );
     };
 
-    function App() {
-      return (
-        <ErrorBoundary>
-          <Router>
-            <ToastProvider>
-              <AuthProvider>
+function App() {
+  return (
+    <ErrorBoundary>
+      <Router>
+        <ToastProvider>
+          <AuthProvider>
+            <CartProvider>
+              <FeatureFlagProvider>
                 <AppContent />
-              </AuthProvider>
-            </ToastProvider>
-          </Router>
-        </ErrorBoundary>
-      );
-    }
+              </FeatureFlagProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </Router>
+    </ErrorBoundary>
+  );
+}
 
-    export default App;
+export default App;

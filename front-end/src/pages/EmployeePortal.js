@@ -1,5 +1,5 @@
 import React from 'react';
-import './EmployeePortal.css';
+import { Container, Card, Alert } from 'react-bootstrap';
 
 /**
  * Employee Base Portal
@@ -8,12 +8,19 @@ import './EmployeePortal.css';
  */
 const EmployeePortal = () => {
   return (
-    <div className="employee-portal">
-      <div className="container">
-        <h1 className="page-title">Employee Portal</h1>
-        <p>Employee features coming soon: Clock in/out, schedules, leave requests</p>
-      </div>
-    </div>
+    <Container className="py-5">
+      <h1 className="mb-4">Employee Portal</h1>
+      <Alert variant="info">
+        <strong>ℹ️ Employee Portal:</strong> Clock in/out, view schedules, submit leave requests
+      </Alert>
+      <Card className="text-center p-5">
+        <Card.Body>
+          <div style={{ fontSize: '4rem' }}>👷</div>
+          <h3 className="mt-3">Employee Features Coming Soon</h3>
+          <p className="text-muted">Clock in/out, schedules, leave requests, and more</p>
+        </Card.Body>
+      </Card>
+    </Container>
   );
 };
 

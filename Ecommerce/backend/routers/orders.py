@@ -11,6 +11,7 @@ from schemas import OrderResponse, CreateOrderRequest, MessageResponse
 from Services.OrderService import OrderService
 from Utilities.auth import get_current_active_user
 from Utilities.rate_limiting import rate_limiter_moderate
+from Utilities.email_service import send_order_confirmation
 
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
 
@@ -29,6 +30,31 @@ async def create_order(
         shipping_address_id=order_data.shipping_address_id,
         payment_method=order_data.payment_method
     )
+    
+    # Send order confirmation email asynchronously
+    try:
+        order_items = [
+            {
+                "product_name": item.product.name if hasattr(item, 'product') else "Product",
+                "quantity": item.quantity,
+                "price": item.unit_price_cents / 100
+            }
+            for item in order.items
+        ]
+        
+        await send_order_confirmation(
+            to_email=current_user.email,
+            order_data={
+                "id": order.id,
+                "customer_name": f"{current_user.first_name} {current_user.last_name}",
+                "total": order.total_cents / 100,
+                "items": order_items,
+                "created_at": order.created_at.isoformat()
+            }
+        )
+    except Exception as e:
+        # Don't fail order creation if email fails
+        print(f"Failed to send order confirmation email: {e}")
     
     return order
 

@@ -20,6 +20,10 @@ from Services.NotificationService import NotificationService
 from Utilities.auth import create_access_token, create_refresh_token, get_current_user, verify_token
 from Utilities.csrf_protection import generate_csrf_token
 from Utilities.rate_limiting import rate_limiter_auth, rate_limiter_register, rate_limiter_moderate
+from Utilities.email_service import send_password_reset, send_order_confirmation
+from Models.PasswordResetToken import PasswordResetToken
+from datetime import datetime, timedelta, timezone
+import secrets
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -126,7 +130,6 @@ async def refresh_access_token(token_data: RefreshTokenRequest, db: AsyncSession
 async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
     """Forgot password - Send password recovery email"""
     user_service = UserService(db)
-    notification_service = NotificationService(db)
     
     user = await user_service.get_user_by_email(email)
     
@@ -134,17 +137,32 @@ async def forgot_password(email: str, db: AsyncSession = Depends(get_db)):
         # Don't reveal if email exists or not (security best practice)
         return {"message": "If the email exists, a password reset link has been sent"}
     
-    # Generate password reset token
-    reset_token = create_access_token(
-        data={"sub": email, "type": "password_reset"},
-        expires_delta_minutes=30  # 30 minute expiry
+    # Generate secure random token
+    reset_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Save token to database
+    token_record = PasswordResetToken(
+        user_id=user.id,
+        token=reset_token,
+        expires_at=expires_at,
+        is_used=False
     )
+    db.add(token_record)
+    await db.commit()
     
     # Send password reset email
-    await notification_service.send_password_reset_email(
-        email=email,
-        reset_token=reset_token
-    )
+    try:
+        await send_password_reset(
+            to_email=email,
+            reset_data={
+                "user_name": f"{user.first_name} {user.last_name}",
+                "reset_token": reset_token,
+                "reset_url": f"http://localhost:3000/reset-password?token={reset_token}"
+            }
+        )
+    except Exception as e:
+        print(f"Failed to send password reset email: {e}")
     
     return {"message": "If the email exists, a password reset link has been sent"}
 
@@ -156,27 +174,41 @@ async def reset_password(
     db: AsyncSession = Depends(get_db)
 ):
     """Reset password using recovery token"""
-    try:
-        payload = verify_token(reset_token)
-        email = payload.get("sub")
-        token_type = payload.get("type")
-        
-        if not email or token_type != "password_reset":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid or expired reset token"
-            )
-        
-        user_service = UserService(db)
-        await user_service.update_password(email, new_password)
-        
-        return {"message": "Password reset successfully"}
-        
-    except Exception:
+    from sqlalchemy import select
+    
+    # Find token in database
+    result = await db.execute(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token == reset_token,
+            PasswordResetToken.is_used == False,
+            PasswordResetToken.expires_at > datetime.now(timezone.utc)
+        )
+    )
+    token_record = result.scalar_one_or_none()
+    
+    if not token_record:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired reset token"
         )
+    
+    # Update password
+    user_service = UserService(db)
+    user = await user_service.get_user_by_id(token_record.user_id)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    await user_service.update_password(user.email, new_password)
+    
+    # Mark token as used
+    token_record.is_used = True
+    await db.commit()
+    
+    return {"message": "Password reset successfully"}
 
 
 # ============================================================================

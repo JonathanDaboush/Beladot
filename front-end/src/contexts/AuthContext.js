@@ -17,6 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentView, setCurrentView] = useState('customer');
+  const [viewMode, setViewMode] = useState(null); // For admin role impersonation
 
   // Initialize auth state on mount
   useEffect(() => {
@@ -169,10 +170,31 @@ export const AuthProvider = ({ children }) => {
     
     // For admin, track impersonation
     if (user?.role === 'admin' && view !== 'admin') {
+      setViewMode(view);
       localStorage.setItem('adminImpersonating', view);
     } else {
+      setViewMode(null);
       localStorage.removeItem('adminImpersonating');
     }
+  };
+
+  // Switch role (admin only) - for role impersonation
+  const switchViewMode = (role) => {
+    if (user?.role !== 'admin') {
+      console.warn('Only admins can switch view modes');
+      return;
+    }
+    
+    setViewMode(role === 'admin' ? null : role);
+    localStorage.setItem('adminViewMode', role);
+  };
+
+  // Get effective role (actual role or impersonated role for admin)
+  const getEffectiveRole = () => {
+    if (user?.role === 'admin' && viewMode) {
+      return viewMode;
+    }
+    return user?.role;
   };
 
   // Check if user has permission for a view
@@ -199,10 +221,13 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     currentView,
+    viewMode,
+    effectiveRole: getEffectiveRole(),
     login,
     register,
     logout,
     switchView,
+    switchViewMode,
     getAvailableViews,
     hasViewAccess,
     isAuthenticated: !!user,

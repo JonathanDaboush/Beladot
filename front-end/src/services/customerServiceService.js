@@ -2,87 +2,104 @@ import api from './api';
 
 /**
  * Customer Service Service
- * Handles CS operations - tickets, refunds, returns, user support (CUSTOMER_SERVICE role)
- * IMPORTANT: All actions must be logged with mandatory audit trail
+ * Handles CS operations - user/seller support, orders, returns, refunds (CUSTOMER_SERVICE role)
+ * IMPORTANT: All actions must create audit logs (mandatory logging)
+ * Routes from /api/customer-service endpoint
  */
 const customerServiceService = {
-  // Get all tickets
-  getTickets: async (page = 1, status = null, priority = null) => {
+  // === TIME TRACKING ===
+  
+  // Clock in
+  clockIn: async () => {
+    const response = await api.post('/customer-service/clock-in');
+    return response.data;
+  },
+
+  // Clock out
+  clockOut: async () => {
+    const response = await api.post('/customer-service/clock-out');
+    return response.data;
+  },
+
+  // === SCHEDULE MANAGEMENT ===
+  
+  // Get own schedule
+  getSchedule: async () => {
+    const response = await api.get('/customer-service/schedule');
+    return response.data;
+  },
+
+  // Request leave
+  requestLeave: async (leaveData) => {
+    const response = await api.post('/customer-service/leave/request', leaveData);
+    return response.data;
+  },
+
+  // === SELLER MANAGEMENT ===
+  
+  // Get all sellers
+  getSellers: async () => {
+    const response = await api.get('/customer-service/sellers');
+    return response.data;
+  },
+
+  // Update seller (with logging)
+  updateSeller: async (sellerId, data) => {
+    const response = await api.put(`/customer-service/sellers/${sellerId}`, data);
+    return response.data;
+  },
+
+  // === USER MANAGEMENT ===
+  
+  // Get all users
+  getUsers: async () => {
+    const response = await api.get('/customer-service/users');
+    return response.data;
+  },
+
+  // Update user (with logging)
+  updateUser: async (userId, data) => {
+    const response = await api.put(`/customer-service/users/${userId}`, data);
+    return response.data;
+  },
+
+  // === ORDER MANAGEMENT ===
+  
+  // Get all orders
+  getOrders: async (page = 1, status = null) => {
     const params = new URLSearchParams({ page });
     if (status) params.append('status', status);
-    if (priority) params.append('priority', priority);
-    const response = await api.get(`/customer-service/tickets?${params}`);
+    const response = await api.get(`/customer-service/orders?${params}`);
     return response.data;
   },
 
-  // Get single ticket
-  getTicket: async (ticketId) => {
-    const response = await api.get(`/customer-service/tickets/${ticketId}`);
+  // Update order
+  updateOrder: async (orderId, data) => {
+    const response = await api.put(`/customer-service/orders/${orderId}`, data);
     return response.data;
   },
 
-  // Update ticket status
-  updateTicket: async (ticketId, updateData, reason) => {
-    const response = await api.put(`/customer-service/tickets/${ticketId}`, {
-      ...updateData,
-      action_reason: reason, // Mandatory logging
-    });
+  // Process refund (with logging)
+  processRefund: async (orderId, refundData) => {
+    const response = await api.post(`/customer-service/orders/${orderId}/refund`, refundData);
     return response.data;
   },
 
-  // Get refund requests
-  getRefundRequests: async (page = 1, status = null) => {
-    const params = new URLSearchParams({ page });
-    if (status) params.append('status', status);
-    const response = await api.get(`/customer-service/refunds?${params}`);
+  // Process return (with logging)
+  processReturn: async (orderId, returnData) => {
+    const response = await api.post(`/customer-service/orders/${orderId}/return`, returnData);
     return response.data;
   },
 
-  // Approve/deny refund
-  processRefund: async (refundId, action, reason) => {
-    const response = await api.post(`/customer-service/refunds/${refundId}/${action}`, {
-      reason, // Mandatory logging
-    });
+  // Create action log (mandatory for all CS actions)
+  createActionLog: async (logData) => {
+    const response = await api.post('/customer-service/logs', logData);
     return response.data;
   },
 
-  // Get return requests
-  getReturnRequests: async (page = 1, status = null) => {
-    const params = new URLSearchParams({ page });
-    if (status) params.append('status', status);
-    const response = await api.get(`/customer-service/returns?${params}`);
-    return response.data;
-  },
-
-  // Approve/deny return
-  processReturn: async (returnId, action, reason) => {
-    const response = await api.post(`/customer-service/returns/${returnId}/${action}`, {
-      reason, // Mandatory logging
-    });
-    return response.data;
-  },
-
-  // View user details (for support)
-  viewUserDetails: async (userId, reason) => {
-    const response = await api.get(`/customer-service/users/${userId}?reason=${encodeURIComponent(reason)}`);
-    return response.data;
-  },
-
-  // Impersonate user action (with logging)
-  performUserAction: async (userId, action, actionData, reason) => {
-    const response = await api.post('/customer-service/impersonate', {
-      user_id: userId,
-      action,
-      action_data: actionData,
-      reason, // Mandatory logging
-    });
-    return response.data;
-  },
-
-  // Get audit logs for CS actions
-  getAuditLogs: async (page = 1, filters = {}) => {
-    const params = new URLSearchParams({ page, ...filters });
-    const response = await api.get(`/customer-service/audit-logs?${params}`);
+  // Get action logs
+  getActionLogs: async (page = 1) => {
+    const response = await api.get(`/customer-service/logs?page=${page}`);
     return response.data;
   },
 };

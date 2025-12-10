@@ -1,0 +1,170 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Container, Row, Col, Nav, Alert, Card, Table, Button, Form, Modal, Badge, InputGroup } from 'react-bootstrap';
+import customerServiceService from '../services/customerServiceService';
+import { TableSkeleton } from '../components/common/LoadingSkeleton';
+import { EmptyTicketsState } from '../components/common/EmptyState';
+import { useKeyboardShortcuts, SHORTCUTS } from '../utils/keyboardShortcuts';
+import { formatCurrency, formatDate, formatRelativeTime } from '../utils/formatters';
+import { useToast } from '../contexts/ToastContext';
+
+/**
+ * Customer Service Console (Zendesk-style)
+ * Dense ticket management, refund/return approvals with MANDATORY LOGGING
+ * Available to: CUSTOMER_SERVICE role only
+ * CRITICAL: All actions MUST log via createActionLog()
+ */
+const CSConsole = () => {
+  const [activeTab, setActiveTab] = useState('tickets');
+  const [users, setUsers] = useState([]);
+  const [sellers, setSellers] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [actionType, setActionType] = useState('');
+  const [actionReason, setActionReason] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const toast = useToast();
+  const searchInputRef = useRef(null);
+
+  // Keyboard shortcuts (j/k navigation like Gmail/Zendesk)
+  const shortcuts = [
+    { ...SHORTCUTS.CS.NEXT_TICKET, callback: () => navigateTickets(1) },
+    { ...SHORTCUTS.CS.PREV_TICKET, callback: () => navigateTickets(-1) },
+    { ...SHORTCUTS.CS.SEARCH_ORDER, callback: () => { setActiveTab('orders'); searchInputRef.current?.focus(); }},
+    { ...SHORTCUTS.CS.SEARCH_USER, callback: () => { setActiveTab('users'); searchInputRef.current?.focus(); }},
+    { ...SHORTCUTS.GLOBAL.SEARCH, callback: () => searchInputRef.current?.focus() },
+  ];
+  useKeyboardShortcuts(shortcuts, [selectedIndex, activeTab]);
+
+  const navigateTickets = (direction) => {
+    const currentList = activeTab === 'users' ? users : activeTab === 'sellers' ? sellers : orders;
+    const newIndex = Math.max(0, Math.min(currentList.length - 1, selectedIndex + direction));
+    setSelectedIndex(newIndex);
+    setSelectedItem(currentList[newIndex]);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [activeTab]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      if (activeTab === 'users') {
+        const data = await customerServiceService.getUsers();
+        setUsers(data.items || data || []);
+      } else if (activeTab === 'sellers') {
+        const data = await customerServiceService.getSellers();
+        setSellers(data.items || data || []);
+      } else if (activeTab === 'orders') {
+        const data = await customerServiceService.getOrders();
+        setOrders(data.items || data || []);
+      }
+    } catch (err) {
+      toast.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Container fluid className="vh-100">
+      <Row className="h-100">
+        {/* Sidebar */}
+        <Col md={3} lg={2} className="bg-dark text-white p-0">
+          <div className="p-3 border-bottom border-secondary">
+            <h4>🎧 Customer Service</h4>
+          </div>
+          <Nav className="flex-column">
+            <Nav.Link
+              className={`text-white ${activeTab === 'tickets' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('tickets')}
+            >
+              🎫 Tickets
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'refunds' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('refunds')}
+            >
+              💰 Refunds
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'returns' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('returns')}
+            >
+              📦 Returns
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'audit' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('audit')}
+            >
+              📋 Audit Logs
+            </Nav.Link>
+          </Nav>
+        </Col>
+
+        {/* Main Content */}
+        <Col md={9} lg={10} className="p-4">
+          <h1 className="mb-4">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+
+          <Alert variant="warning">
+            <strong>⚠️ Mandatory Logging:</strong> All customer service actions
+            require a reason and are automatically logged for audit purposes.
+          </Alert>
+
+          <Card>
+            <Card.Body>
+              {activeTab === 'tickets' && (
+                <div>
+                  <h3>Support Tickets</h3>
+                  <p>View and manage customer support tickets</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>🎫</div>
+                    <p>Ticket management interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'refunds' && (
+                <div>
+                  <h3>Refund Requests</h3>
+                  <p>Approve or deny refund requests based on business rules</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>💰</div>
+                    <p>Refund management interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'returns' && (
+                <div>
+                  <h3>Return Requests</h3>
+                  <p>Process product return requests</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>📦</div>
+                    <p>Return management interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'audit' && (
+                <div>
+                  <h3>Audit Logs</h3>
+                  <p>View all customer service actions and impersonations</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>📋</div>
+                    <p>Audit log viewer coming soon</p>
+                  </div>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
+  );
+};
+
+export default CSConsole;

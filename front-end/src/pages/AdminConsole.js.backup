@@ -1,0 +1,146 @@
+import React, { useState } from 'react';
+import { Container, Row, Col, Nav, Alert, Card } from 'react-bootstrap';
+
+/**
+ * Admin Console (AWS Console style)
+ * Full system access - user management, system config, ALL operations
+ * Available to: ADMIN role only
+ */
+const AdminConsole = () => {
+  const [activeTab, setActiveTab] = useState('users');
+
+  return (
+    <Container fluid className="vh-100">
+      <Row className="h-100">
+        {/* Sidebar */}
+        <Col md={3} lg={2} className="bg-dark text-white p-0">
+          <div className="p-3 border-bottom border-secondary">
+            <h4>⚙️ Admin</h4>
+          </div>
+          <Nav className="flex-column">
+            <Nav.Link
+              className={`text-white ${activeTab === 'users' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('users')}
+            >
+              👥 Users
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'products' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('products')}
+            >
+              📦 Products
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'orders' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('orders')}
+            >
+              🛒 Orders
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'config' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('config')}
+            >
+              ⚙️ Configuration
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'features' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('features')}
+            >
+              🎛️ Feature Flags
+            </Nav.Link>
+            <Nav.Link
+              className={`text-white ${activeTab === 'audit' ? 'bg-primary' : ''}`}
+              onClick={() => setActiveTab('audit')}
+            >
+              📋 Audit Logs
+            </Nav.Link>
+          </Nav>
+        </Col>
+
+        {/* Main Content */}
+        <Col md={9} lg={10} className="p-4">
+          <h1 className="mb-4">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h1>
+
+          <Alert variant="danger">
+            <strong>⚠️ Admin Access:</strong> You have full system access.
+            All actions are logged. Critical operations require confirmation.
+          </Alert>
+
+          <Card>
+            <Card.Body>
+              {activeTab === 'users' && (
+                <div>
+                  <h3>User Management</h3>
+                  <p>
+                    Create, edit, deactivate users. Reset passwords. Assign roles.
+                  </p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>👥</div>
+                    <p>User management interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'products' && (
+                <div>
+                  <h3>Product Management (All Sellers)</h3>
+                  <p>Modify ANY product from ANY seller</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>📦</div>
+                    <p>Product management interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'orders' && (
+                <div>
+                  <h3>Order Management (All Orders)</h3>
+                  <p>View and modify ALL orders in the system</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>🛒</div>
+                    <p>Order management interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'config' && (
+                <div>
+                  <h3>System Configuration</h3>
+                  <p>Tax rates, shipping rates, payment gateways, API keys</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>⚙️</div>
+                    <p>System configuration interface coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'features' && (
+                <div>
+                  <h3>Feature Flags</h3>
+                  <p>Enable/disable features system-wide</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>🎛️</div>
+                    <p>Feature flag management coming soon</p>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'audit' && (
+                <div>
+                  <h3>Audit Logs (Full System)</h3>
+                  <p>View ALL system activity and admin actions</p>
+                  <div className="text-center py-5">
+                    <div style={{ fontSize: '4rem' }}>📋</div>
+                    <p>Audit log viewer coming soon</p>
+                  </div>
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
+  );
+};
+
+export default AdminConsole;

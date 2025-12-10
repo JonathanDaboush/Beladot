@@ -19,6 +19,7 @@ from Services.ShippingCarrierService import ShippingCarrierService
 from Services.OrderService import OrderService
 from Utilities.auth import get_current_transfer_user
 from Utilities.rate_limiting import rate_limiter_moderate
+from Utilities.email_service import send_shipping_update
 
 router = APIRouter(prefix="/api/transfer", tags=["Transfer"])
 
@@ -216,6 +217,11 @@ async def update_shipment_status(
     db: AsyncSession = Depends(get_db)
 ):
     """Update shipment status and add notes about what happened"""
+    from sqlalchemy import select
+    from Models.Shipment import Shipment
+    from Models.Order import Order
+    from Models.User import User
+    
     shipping_service = ShippingCarrierService(db)
     
     await shipping_service.update_shipment_status(
@@ -224,6 +230,42 @@ async def update_shipment_status(
         notes=notes,
         updated_by=current_user.id
     )
+    
+    # Send shipping update email to customer
+    if status in ['shipped', 'in_transit', 'out_for_delivery', 'delivered']:
+        try:
+            # Get shipment, order, and user info
+            result = await db.execute(
+                select(Shipment).where(Shipment.id == shipment_id)
+            )
+            shipment = result.scalar_one_or_none()
+            
+            if shipment:
+                order_result = await db.execute(
+                    select(Order).where(Order.id == shipment.order_id)
+                )
+                order = order_result.scalar_one_or_none()
+                
+                if order:
+                    user_result = await db.execute(
+                        select(User).where(User.id == order.user_id)
+                    )
+                    user = user_result.scalar_one_or_none()
+                    
+                    if user:
+                        await send_shipping_update(
+                            to_email=user.email,
+                            shipment_data={
+                                "order_id": order.id,
+                                "tracking_number": shipment.tracking_number or "N/A",
+                                "carrier": shipment.carrier or "Standard",
+                                "status": status,
+                                "customer_name": f"{user.first_name} {user.last_name}",
+                                "estimated_delivery": shipment.estimated_delivery.isoformat() if hasattr(shipment, 'estimated_delivery') and shipment.estimated_delivery else "TBD"
+                            }
+                        )
+        except Exception as e:
+            print(f"Failed to send shipping update email: {e}")
     
     return {"message": f"Shipment {shipment_id} status updated to {status}"}
 

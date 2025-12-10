@@ -5,15 +5,21 @@ import api from './api';
  * Handles seller portal operations (SELLER role)
  */
 const sellerService = {
-  // Get seller profile
-  getSellerProfile: async () => {
-    const response = await api.get('/seller/profile');
+  // Register as seller
+  registerSeller: async (businessInfo, financeInfo) => {
+    const response = await api.post('/seller/register', { business_info: businessInfo, finance_info: financeInfo });
     return response.data;
   },
 
-  // Update seller profile
-  updateSellerProfile: async (profileData) => {
-    const response = await api.put('/seller/profile', profileData);
+  // Get seller profile/info
+  getSellerInfo: async () => {
+    const response = await api.get('/seller/my-seller-info');
+    return response.data;
+  },
+
+  // Get sales report
+  getSalesReport: async (params = {}) => {
+    const response = await api.get('/seller/sales', { params });
     return response.data;
   },
 
@@ -23,48 +29,27 @@ const sellerService = {
     return response.data;
   },
 
-  // Create product
-  createProduct: async (productData) => {
-    const response = await api.post('/products', productData);
-    return response.data;
-  },
-
-  // Update product
+  // Update product (seller can only update their own)
   updateProduct: async (productId, productData) => {
-    const response = await api.put(`/products/${productId}`, productData);
+    const response = await api.patch(`/seller/products/${productId}`, productData);
     return response.data;
   },
 
-  // Delete product
-  deleteProduct: async (productId) => {
-    const response = await api.delete(`/products/${productId}`);
+  // Update product stock
+  updateProductStock: async (productId, stockData) => {
+    const response = await api.patch(`/seller/products/${productId}/stock`, stockData);
     return response.data;
   },
 
-  // Update product inventory
-  updateInventory: async (productId, quantity) => {
-    const response = await api.put(`/products/${productId}/inventory`, { quantity });
+  // Get seller performance metrics
+  getPerformanceMetrics: async () => {
+    const response = await api.get('/analytics/seller/performance');
     return response.data;
   },
 
-  // Get seller orders
-  getSellerOrders: async (page = 1, status = null) => {
-    const params = new URLSearchParams({ page });
-    if (status) params.append('status', status);
-    const response = await api.get(`/seller/orders?${params}`);
-    return response.data;
-  },
-
-  // Get seller analytics
-  getSellerAnalytics: async (startDate, endDate) => {
-    const params = new URLSearchParams({ start_date: startDate, end_date: endDate });
-    const response = await api.get(`/seller/analytics?${params}`);
-    return response.data;
-  },
-
-  // Get sales report
-  getSalesReport: async (period = 'month') => {
-    const response = await api.get(`/seller/sales?period=${period}`);
+  // Get seller finance info (Admin access)
+  getSellerFinance: async (sellerId) => {
+    const response = await api.get(`/seller/finance/${sellerId}`);
     return response.data;
   },
 };

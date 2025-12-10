@@ -1,0 +1,28 @@
+.empty-state {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.empty-state-icon {
+  animation: empty-state-float 3s ease-in-out infinite;
+}
+
+@keyframes empty-state-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.empty-state-title {
+  font-weight: 600;
+}
+
+.empty-state-message {
+  max-width: 400px;
+}

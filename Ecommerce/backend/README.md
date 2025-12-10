@@ -1,43 +1,96 @@
-# E-Commerce Backend API
+# Beladot E-Commerce Backend API
 
-A production-ready e-commerce backend built with FastAPI, featuring comprehensive business logic separation, role-based access control, and complete order fulfillment workflows.
+Enterprise-grade e-commerce backend built with FastAPI, featuring comprehensive business logic, role-based access control, email notifications, image uploads, and complete order fulfillment workflows.
 
 ## 📋 Table of Contents
 
-- [Features](#features)
-- [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Database Setup](#database-setup)
-- [Running the Application](#running-the-application)
-- [Testing](#testing)
-- [API Documentation](#api-documentation)
-- [Project Structure](#project-structure)
-- [Deployment](#deployment)
+- [Quick Start](#-quick-start)
+- [Features](#-features)
+- [Architecture](#-architecture)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [Database Setup](#-database-setup)
+- [Running the Application](#-running-the-application)
+- [Testing](#-testing)
+- [API Documentation](#-api-documentation)
+- [Deployment](#-deployment)
+
+## 🚀 Quick Start
+
+```powershell
+# Navigate to backend directory
+cd Ecommerce\backend
+
+# Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your database and SMTP credentials
+
+# Run migrations
+alembic upgrade head
+
+# Start server
+uvicorn app:app --reload --host 0.0.0.0 --port 8000
+```
+
+Access the API at:
+- **API**: http://localhost:8000
+- **API Docs**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
 
 ## ✨ Features
 
-### Core Functionality
-- **User Management**: Registration, authentication, role-based access (Customer, Employee, Manager, Admin, Seller, Analyst, CS, Finance, Transfer)
-- **Product Catalog**: Multi-level categories, variants, images, inventory tracking
-- **Shopping Cart**: Persistent carts with pricing calculations
-- **Checkout & Payments**: Secure payment processing with stored payment methods
-- **Order Management**: Order tracking, fulfillment, shipment creation
+### Core E-Commerce
+- **User Management**: Registration, authentication, JWT tokens, role-based access control
+- **Product Catalog**: Categories, variants, options, inventory tracking
+- **Shopping Cart**: Persistent carts with real-time pricing
+- **Checkout & Orders**: Secure order placement, payment processing
+- **Order Management**: Status tracking, fulfillment, shipment creation
+- **Search & Filters**: Advanced product search by category, price, rating, stock status
+
+### Advanced Features  
+- **Email Notifications**: 
+  - Order confirmations
+  - Shipping updates
+  - Password reset emails
+- **Image Management**:
+  - Product image uploads (single/bulk)
+  - Automatic thumbnail generation
+  - Format validation (5MB max)
+- **Reviews & Ratings**:
+  - Verified purchase reviews
+  - Rating aggregation
+  - Helpful votes
+- **Wishlist**: Save products, move to cart
+- **Password Reset**: Secure token-based recovery
+
+### Business Features
 - **Seller Portal**: Product management, sales analytics, payout tracking
 - **Employee Management**: Scheduling, time tracking, payroll, leave management
-- **Analytics**: Comprehensive metrics for business intelligence
+- **Inventory Tracking**: Stock levels, transaction logs, low-stock alerts
+- **Coupons & Discounts**: Flexible coupon system with eligibility rules
+- **Refunds & Returns**: Complete refund processing workflow
+- **Analytics Dashboard**: Sales metrics, user insights, product performance
+- **Audit Logging**: Complete audit trail for compliance
 
-### Technical Features
-- **Async/Await**: Full asynchronous operation using AsyncIO
-- **Clean Architecture**: Service layer pattern with proper separation of concerns
-- **Security**: JWT authentication, CSRF protection, rate limiting, input validation
-- **Database**: PostgreSQL with SQLAlchemy ORM
-- **Multi-Currency**: Support for international transactions
-- **Audit Logging**: Complete audit trail for all operations
-- **API Documentation**: Auto-generated OpenAPI/Swagger docs
+### Security & Performance
+- JWT authentication with refresh tokens
+- Role-based authorization (9 roles)
+- Rate limiting and CSRF protection
+- Input validation with Pydantic
+- SQL injection prevention
+- Async/await for high performance
+- Database connection pooling
 
 ## 🏗️ Architecture
+
+### Clean Architecture Pattern
 
 ```
 Backend/
@@ -46,39 +99,43 @@ Backend/
 ├── database.py               # Database connection & session handling
 ├── schemas.py                # Pydantic request/response models
 │
-├── routers/                  # HTTP endpoint handlers (31 routers)
-│   ├── auth.py              # Authentication & registration
+├── routers/                  # HTTP endpoint handlers (33 routers)
+│   ├── auth.py              # Authentication & password reset
+│   ├── search.py            # Product search with filters
+│   ├── upload.py            # Image upload endpoints
+│   ├── reviews.py           # Review CRUD operations
+│   ├── wishlist.py          # Wishlist management
 │   ├── catalog.py           # Product catalog management
 │   ├── checkout.py          # Order checkout
-│   ├── fulfillment.py       # Shipment tracking
 │   └── ...
 │
-├── Services/                 # Business logic layer (20 services)
+├── Services/                 # Business logic layer
 │   ├── UserService.py       # User operations
 │   ├── CatalogService.py    # Product management
 │   ├── CheckoutService.py   # Order processing
-│   ├── FulfillmentService.py # Shipping operations
 │   └── ...
 │
 ├── Repositories/             # Data access layer
 │   └── *Repository.py       # Database CRUD operations
 │
 ├── Models/                   # SQLAlchemy ORM models
-│   ├── User.py              # User table definition
-│   ├── Product.py           # Product table
-│   ├── Order.py             # Order table
+│   ├── User.py              # User accounts
+│   ├── Product.py           # Products & variants
+│   ├── Order.py             # Orders & items
+│   ├── Review.py            # Product reviews
+│   ├── Wishlist.py          # User wishlists
+│   ├── PasswordResetToken.py # Password reset tokens
 │   └── ...
-│
-├── Classes/                  # Domain objects (business entities)
-│   └── *.py                 # Rich domain models
 │
 ├── Utilities/               # Helper functions
 │   ├── auth.py              # JWT token handling
-│   ├── rate_limiting.py     # Request rate limiting
-│   └── csrf_protection.py   # CSRF token management
+│   ├── email_service.py     # Email sending (SMTP)
+│   └── ...
 │
-└── Tests/                   # Test suite
-    └── test_*.py            # Unit & integration tests
+└── Tests/                   # Comprehensive test suite
+    ├── test_new_features.py # Feature tests (47 tests)
+    ├── fixtures_new_features.py # Test fixtures
+    └── ...
 ```
 
 ### Request Flow
@@ -89,9 +146,9 @@ FastAPI App (app.py)
     ↓
 Middleware (Auth, CORS, Rate Limiting)
     ↓
-Router (routers/*.py) - Validates input, checks authorization
+Router (routers/*.py) - Input validation, authorization
     ↓
-Service (Services/*.py) - Implements business logic
+Service (Services/*.py) - Business logic
     ↓
 Repository (Repositories/*.py) - Database operations
     ↓
@@ -102,17 +159,15 @@ PostgreSQL Database
 
 ## 📋 Prerequisites
 
-### Required Software
-- **Python**: 3.11 or higher
-- **PostgreSQL**: 14 or higher
-- **Redis**: 6 or higher (for caching & rate limiting)
+- **Python**: 3.8 or higher
+- **PostgreSQL**: 13 or higher
 - **Git**: For version control
 
 ### Optional
 - **Docker**: For containerized deployment
-- **AWS Account**: For S3 blob storage (images, documents)
+- **SMTP Account**: Gmail or other email service (for notifications)
 
-## 🚀 Installation
+## 🔧 Installation
 
 ### 1. Clone the Repository
 ```bash
@@ -121,12 +176,15 @@ cd Beladot/Ecommerce/backend
 ```
 
 ### 2. Create Virtual Environment
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
 
-# Linux/macOS
+**Windows:**
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+```
+
+**Linux/macOS:**
+```bash
 python3 -m venv venv
 source venv/bin/activate
 ```
@@ -139,7 +197,7 @@ pip install -r requirements.txt
 
 ### 4. Verify Installation
 ```bash
-python -c "import fastapi; import sqlalchemy; print('✓ Dependencies installed successfully')"
+python -c "import fastapi; import sqlalchemy; print('✓ All dependencies installed')"
 ```
 
 ## ⚙️ Configuration
@@ -158,72 +216,39 @@ cp .env.example .env
 Edit `.env` with your settings:
 
 ```env
-# ============================================================================
-# DATABASE CONFIGURATION
-# ============================================================================
-# Async database URL for FastAPI (asyncpg driver)
-DATABASE_URL=postgresql+asyncpg://postgres:your_password@localhost:5432/ecommerce
+# Database
+DATABASE_URL=postgresql://beladot_user:your_password@localhost:5432/beladot_db
 
-# Sync database URL for migrations (psycopg2 driver)
-DATABASE_URL_SYNC=postgresql://postgres:your_password@localhost:5432/ecommerce
-
-# ============================================================================
-# SECURITY
-# ============================================================================
-# Generate secret key: python -c "import secrets; print(secrets.token_urlsafe(32))"
-SECRET_KEY=your-super-secret-key-change-this-in-production
-
-# JWT Configuration
+# JWT Security
+SECRET_KEY=your-secret-key-min-32-chars-change-in-production
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
 
-# ============================================================================
-# SERVER CONFIGURATION
-# ============================================================================
-HOST=0.0.0.0
-PORT=8000
-DEBUG=True
-ENVIRONMENT=development
+# CORS
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
 
-# ============================================================================
-# CORS (Cross-Origin Resource Sharing)
-# ============================================================================
-# Comma-separated list of allowed origins
-CORS_ORIGINS=http://localhost:3000,http://localhost:8080
-
-# ============================================================================
-# REDIS (Caching & Rate Limiting)
-# ============================================================================
-REDIS_URL=redis://localhost:6379/0
-
-# ============================================================================
-# EMAIL (Optional - for notifications)
-# ============================================================================
+# Email Configuration (Gmail example)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-specific-password
+SMTP_FROM_EMAIL=noreply@beladot.com
+SMTP_FROM_NAME=Beladot Marketplace
 
-# ============================================================================
-# PAYMENT GATEWAY (Optional)
-# ============================================================================
-PAYMENT_GATEWAY_API_KEY=your-payment-gateway-key
+# File Uploads
+UPLOAD_DIR=./uploads
 
-# ============================================================================
-# SHIPPING CONFIGURATION
-# ============================================================================
-DEFAULT_CARRIER=purolator
-AVAILABLE_CARRIERS=purolator,fedex,dhl,ups,canadapost
-
-# ============================================================================
-# AWS S3 (Optional - for file storage)
-# ============================================================================
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_BUCKET_NAME=your-bucket-name
-AWS_REGION=us-east-1
+# Environment
+ENVIRONMENT=development
 ```
+
+**Important Settings:**
+
+1. **Database**: Update with your PostgreSQL credentials
+2. **SECRET_KEY**: Generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"`
+3. **SMTP**: Use Gmail app-specific password (not your regular password)
+   - Enable 2FA in Google Account
+   - Generate app password at: https://myaccount.google.com/apppasswords
 
 ### 3. Generate Secret Key
 
@@ -271,28 +296,26 @@ CREATE DATABASE ecommerce_test;
 \q
 ```
 
-### 3. Initialize Database Schema
-
-Run the setup script to create all tables:
+### 3. Run Database Migrations
 
 ```bash
-python setup_production_db.py
+# Run all migrations to create tables
+alembic upgrade head
 ```
 
-This will:
-- Create all tables from Models/
-- Set up enum types (user roles, order status, etc.)
-- Create indexes and constraints
-- Initialize default data if needed
+This creates all required tables:
+- users, products, orders, carts, reviews, wishlists
+- payments, shipments, inventory
+- password_reset_tokens, product_images
+- and 30+ more tables
 
 ### 4. Verify Database Setup
 
 ```bash
 # Check tables were created
-psql -U postgres -d ecommerce -c "\dt"
+psql -U beladot_user -d beladot_db -c "\dt"
 
-# You should see tables like:
-# users, products, orders, carts, payments, shipments, etc.
+# You should see 40+ tables
 ```
 
 ## 🏃 Running the Application
@@ -335,12 +358,6 @@ docker run -d -p 8000:8000 --env-file .env ecommerce-backend
 
 ## 🧪 Testing
 
-### Setup Test Database
-
-```bash
-python setup_test_db.py
-```
-
 ### Run Tests
 
 ```bash
@@ -351,20 +368,29 @@ pytest
 pytest --cov=. --cov-report=html
 
 # Run specific test file
-pytest Tests/test_catalog_endpoints.py
+pytest Tests/test_new_features.py -v
+
+# Run specific test category
+pytest Tests/test_new_features.py::TestPasswordReset -v
 
 # Run with verbose output
 pytest -v
-
-# Run tests matching pattern
-pytest -k "test_catalog"
 ```
 
 ### Test Coverage
 
+The test suite includes **47 comprehensive tests** covering:
+- ✅ Password reset flow (4 tests)
+- ✅ Image uploads (5 tests)
+- ✅ Product reviews (9 tests)
+- ✅ Wishlist operations (7 tests)
+- ✅ Search filters (7 tests)
+- ✅ Email notifications (3 tests)
+- ✅ Integration workflows (2 tests)
+
 View coverage report:
 ```bash
-# Generate HTML report
+# Generate HTML coverage report
 pytest --cov=. --cov-report=html
 
 # Open in browser (Windows)
@@ -386,67 +412,118 @@ Once the server is running, visit:
 
 See `API_QUICK_REFERENCE.md` for common API patterns and examples.
 
-### Authentication
+### Key API Endpoints
 
-Most endpoints require authentication. To access protected endpoints:
+**Authentication:**
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+- `POST /auth/forgot-password` - Request password reset
+- `POST /auth/reset-password` - Reset password with token
 
-1. **Register a user**:
+**Products:**
+- `GET /api/products` - List products
+- `GET /api/products/{id}` - Product details
+- `POST /api/products` - Create product (Seller/Admin)
+- `GET /api/search` - Search with filters
+
+**Reviews:**
+- `POST /api/reviews` - Create review (verified purchase)
+- `GET /api/reviews/product/{id}` - Get product reviews
+- `POST /api/reviews/{id}/helpful` - Mark helpful
+
+**Wishlist:**
+- `GET /api/wishlist` - Get wishlist
+- `POST /api/wishlist` - Add to wishlist
+- `POST /api/wishlist/{id}/move-to-cart` - Move to cart
+
+**Image Uploads:**
+- `POST /api/upload/product-image` - Upload single image
+- `POST /api/upload/product-images-bulk` - Upload multiple
+
+**Cart & Orders:**
+- `GET /api/cart` - Get cart
+- `POST /api/cart/items` - Add to cart
+- `POST /api/orders` - Place order
+- `GET /api/orders` - Order history
+
+### Authentication Example
+
 ```bash
-curl -X POST http://localhost:8000/api/auth/register \
+# 1. Register
+curl -X POST http://localhost:8000/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "password": "securepass123"}'
-```
+  -d '{"email": "user@example.com", "password": "SecurePass123!", "first_name": "John", "last_name": "Doe"}'
 
-2. **Login to get token**:
-```bash
-curl -X POST http://localhost:8000/api/auth/login \
+# 2. Login
+curl -X POST http://localhost:8000/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "password": "securepass123"}'
-```
+  -d '{"email": "user@example.com", "password": "SecurePass123!"}'
 
-3. **Use token in requests**:
-```bash
-curl -X GET http://localhost:8000/api/catalog/categories \
+# 3. Use token
+curl -X GET http://localhost:8000/api/products \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
 ## 📁 Project Structure
 
-### Services (Business Logic)
-All business rules and workflows are implemented in the Service layer:
+### Routers (33 API Endpoint Groups)
 
-- **AnalyticsService**: Metrics, reports, business intelligence
-- **CartService**: Shopping cart operations
-- **CatalogService**: Product catalog management
-- **CheckoutService**: Order creation and checkout flow
-- **FulfillmentService**: Shipment creation and tracking
-- **InventoryService**: Stock management
-- **OrderService**: Order processing
-- **PaymentService**: Payment processing
-- **PayrollService**: Employee payroll calculations
-- **SchedulingService**: Employee shift scheduling
-- **UserService**: User authentication and management
+**Core:**
+- `auth.py` - Authentication, registration, password reset
+- `search.py` - Product search with filters
+- `catalog.py` - Product catalog management
+- `checkout.py` - Order checkout
+- `cart.py` - Shopping cart operations
 
-### Models (Database Schema)
-SQLAlchemy ORM models define the database structure:
+**New Features:**
+- `upload.py` - Image uploads with thumbnails
+- `reviews.py` - Product reviews & ratings
+- `wishlist.py` - Wishlist management
 
-- **User**: User accounts with roles
-- **Product**: Products with variants and images
-- **Order**: Customer orders
-- **Payment**: Payment records
-- **Shipment**: Shipping information
-- **Employee**: Employee data
-- **Seller**: Seller accounts
+**Business:**
+- `fulfillment.py` - Shipment tracking
+- `transfer.py` - Order transfers
+- `seller.py` - Seller operations
+- `employee.py` - Employee management
+- `analytics.py` - Business metrics
+- `manager.py` - Manager operations
+- And 20+ more...
 
-### Routers (API Endpoints)
-31 routers organize endpoints by domain:
+### Services (Business Logic Layer)
 
-- `auth.py`: Authentication & registration
-- `catalog.py`: Product catalog (admin & sellers)
-- `fulfillment.py`: Shipment tracking
-- `checkout.py`: Order checkout
-- `analytics.py`: Business metrics
-- `manager.py`: Manager operations
+- **UserService** - User authentication, profiles
+- **CatalogService** - Product management
+- **CheckoutService** - Order processing
+- **CartService** - Cart operations
+- **FulfillmentService** - Shipping
+- **InventoryService** - Stock management
+- **PaymentService** - Payment processing
+- **AnalyticsService** - Business intelligence
+- **SchedulingService** - Employee scheduling
+- **PayrollService** - Payroll calculations
+
+### Models (40+ Database Tables)
+
+**Core:**
+- `User` - User accounts with 9 role types
+- `Product` - Products with variants
+- `Order` - Orders with items
+- `Cart` - Shopping carts
+- `Payment` - Payment records
+
+**New Tables:**
+- `Review` - Product reviews & ratings
+- `Wishlist` / `WishlistItem` - User wishlists
+- `PasswordResetToken` - Password reset tokens
+- `ProductImage` - Product images with thumbnails
+
+**Business:**
+- `Seller` / `SellerFinance` - Seller accounts
+- `Employee` / `EmployeeSchedule` - Employee management
+- `Shipment` / `ShipmentItem` - Shipping
+- `Coupon` / `CouponEligibility` - Discounts
+- `Refund` / `Return` - Returns processing
+- And 25+ more...
 
 ## 🔐 Security Features
 
@@ -476,113 +553,133 @@ SQLAlchemy ORM models define the database structure:
 
 ### Production Checklist
 
-- [ ] Set `ENVIRONMENT=production` in `.env`
-- [ ] Set `DEBUG=False` in `.env`
-- [ ] Generate strong `SECRET_KEY`
-- [ ] Configure PostgreSQL with SSL
-- [ ] Set up Redis with authentication
-- [ ] Configure proper CORS origins
+**Security:**
+- [ ] Generate strong `SECRET_KEY` (32+ chars)
+- [ ] Set `ENVIRONMENT=production`
+- [ ] Configure SMTP with app-specific password
+- [ ] Update `ALLOWED_ORIGINS` with production domain
 - [ ] Enable HTTPS/TLS certificates
-- [ ] Set up database backups
-- [ ] Configure logging to external service
-- [ ] Set up monitoring (Sentry, New Relic)
-- [ ] Configure email service
-- [ ] Set up payment gateway
-- [ ] Review and test all security settings
+- [ ] Set up firewall rules
 
-### Environment-Specific Configuration
+**Database:**
+- [ ] Use production PostgreSQL server
+- [ ] Run migrations: `alembic upgrade head`
+- [ ] Set up automated backups
+- [ ] Configure connection pooling
 
-**Development**:
-```env
-ENVIRONMENT=development
-DEBUG=True
+**Application:**
+- [ ] Use Gunicorn with multiple workers
+- [ ] Set up reverse proxy (Nginx)
+- [ ] Configure monitoring (logs, metrics)
+- [ ] Set up error tracking (Sentry)
+- [ ] Create uploads directory with proper permissions
+
+**Email:**
+- [ ] Configure production SMTP credentials
+- [ ] Test all email templates
+- [ ] Set up email delivery monitoring
+
+### Production Server
+
+**Using Gunicorn:**
+```bash
+gunicorn app:app \
+  --workers 4 \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --bind 0.0.0.0:8000 \
+  --access-logfile - \
+  --error-logfile -
 ```
 
-**Staging**:
-```env
-ENVIRONMENT=staging
-DEBUG=False
+**Using Docker:**
+```bash
+docker-compose up -d
 ```
 
-**Production**:
-```env
-ENVIRONMENT=production
-DEBUG=False
-```
+See the main [DOCKER_GUIDE.md](../../DOCKER_GUIDE.md) for complete Docker deployment instructions.
 
 ### Database Migrations
 
-When updating models:
-
+**Create new migration:**
 ```bash
-# After modifying Models/*.py files, restart the application
-# The changes will be reflected on next database connection
+alembic revision --autogenerate -m "Add new feature"
+```
 
-# For complex migrations, use alembic:
-alembic revision --autogenerate -m "Description of changes"
+**Apply migrations:**
+```bash
 alembic upgrade head
 ```
 
-## 📊 Monitoring
-
-### Health Check
+**Rollback migration:**
 ```bash
-curl http://localhost:8000/health
+alembic downgrade -1
 ```
 
-### Logs
-Application logs are written to stdout. Configure log aggregation in production:
+## 📊 Monitoring & Logs
 
-```python
-# Example: Sending logs to external service
-logging.config.dictConfig({
-    'version': 1,
-    'handlers': {
-        'sentry': {
-            'class': 'sentry_sdk.integrations.logging.EventHandler',
-        }
-    }
-})
+### Application Logs
+```bash
+# View logs in development
+tail -f logs/app.log
+
+# Or check console output
 ```
+
+### Performance Monitoring
+- Monitor `/health` endpoint
+- Track API response times
+- Monitor database connection pool
+- Watch upload directory size
 
 ## 🤝 Contributing
 
 ### Code Style
 - Follow PEP 8
 - Use type hints
-- Write docstrings for all functions
-- Keep functions small and focused
-- Service layer for business logic only
+- Write docstrings for public functions
+- Keep business logic in Services
+- Keep data access in Repositories
+- Routers only for validation & auth
 
-### Commit Messages
+### Running Quality Checks
+```bash
+# Run tests
+pytest
+
+# Check code style
+flake8 .
+
+# Type checking
+mypy .
 ```
-feat: Add catalog management endpoints
-fix: Resolve shipment tracking authorization
-docs: Update API documentation
-test: Add fulfillment service tests
-refactor: Extract payment processing logic
-```
 
-## 📝 License
+## 📝 Related Documentation
 
-Copyright © 2025 Jonathan Daboush. All rights reserved.
+- [Main Project README](../../README.md) - Overall project guide
+- [API Quick Reference](API_QUICK_REFERENCE.md) - API endpoint examples
+- [Security Guide](SECURITY.md) - Security best practices
+- [ERD](erd.md) - Database schema diagram
+- [Docker Guide](../../DOCKER_GUIDE.md) - Docker deployment
 
 ## 📞 Support
 
 For issues or questions:
-- Create an issue on GitHub
-- Contact: JonathanDaboush@github.com
+- Check the [main README](../../README.md)
+- Review [API documentation](http://localhost:8000/docs)
+- Open an issue on GitHub
 
-## 🙏 Acknowledgments
+## 🛠️ Built With
 
-Built with:
-- FastAPI - Modern Python web framework
-- SQLAlchemy - Python SQL toolkit and ORM
-- PostgreSQL - Advanced open source database
-- Pydantic - Data validation using Python type hints
-- pytest - Testing framework
+- **FastAPI** - Modern Python web framework
+- **SQLAlchemy** - Python ORM
+- **PostgreSQL** - Database
+- **Pydantic** - Data validation
+- **Alembic** - Database migrations
+- **Pillow** - Image processing
+- **pytest** - Testing framework
 
 ---
 
 **Version**: 2.0.0  
-**Last Updated**: December 7, 2025
+**Last Updated**: December 9, 2025  
+**License**: Proprietary

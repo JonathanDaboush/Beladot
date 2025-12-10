@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Form, InputGroup, Badge, Alert } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import productService from '../services/productService';
-import cartService from '../services/cartService';
+import catalogService from '../services/catalogService';
+import { useCart } from '../contexts/CartContext';
 import { useToast } from '../contexts/ToastContext';
-import LoadingSpinner from '../components/common/LoadingSpinner';
+import { ProductCardSkeleton } from '../components/common/LoadingSkeleton';
+import { EmptyProductsState } from '../components/common/EmptyState';
+import { useKeyboardShortcuts, SHORTCUTS } from '../utils/keyboardShortcuts';
+import { formatCurrency } from '../utils/formatters';
 
 /**
  * Customer Shopping View (Amazon/eBay style)
@@ -16,8 +21,16 @@ const CustomerView = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [cartCount, setCartCount] = useState(0);
+  const { cart, addToCart: addToCartContext } = useCart();
   const toast = useToast();
+  const navigate = useNavigate();
+
+  // Keyboard shortcuts
+  const shortcuts = [
+    { ...SHORTCUTS.CUSTOMER.VIEW_CART, callback: () => navigate('/cart') },
+    { ...SHORTCUTS.GLOBAL.SEARCH, callback: () => document.querySelector('input[type="text"]')?.focus() },
+  ];
+  useKeyboardShortcuts(shortcuts, [navigate]);
 
   useEffect(() => {
     loadInitialData();
@@ -26,15 +39,13 @@ const CustomerView = () => {
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      const [productsData, categoriesData, cartData] = await Promise.all([
+      const [productsData, categoriesData] = await Promise.all([
         productService.getProducts(),
-        productService.getCategories(),
-        cartService.getCart().catch(() => ({ items: [] })),
+        catalogService.getCategories(),
       ]);
       
-      setProducts(productsData.items || []);
+      setProducts(productsData.items || productsData || []);
       setCategories(categoriesData || []);
-      setCartCount(cartData.items?.length || 0);
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to load products');
       toast.error('Failed to load products');
@@ -71,18 +82,31 @@ const CustomerView = () => {
     }
   };
 
-  const handleAddToCart = async (productId) => {
-    try {
-      await cartService.addToCart(productId, 1);
-      setCartCount((prev) => prev + 1);
-      toast.success('Added to cart!');
-    } catch (err) {
-      toast.error('Failed to add to cart');
+  const handleAddToCart = async (product) => {
+    // Prevent adding out-of-stock items
+    if (product.quantity === 0) {
+      toast.error('This product is out of stock');
+      return;
     }
+
+    // Use CartContext for optimistic update
+    await addToCartContext(product.id, 1);
   };
 
+  const cartCount = cart?.items?.length || 0;
+
   if (loading && products.length === 0) {
-    return <LoadingSpinner fullScreen={true} />;
+    return (
+      <Container className="py-5">
+        <Row xs={1} sm={2} md={3} lg={4} className="g-4">
+          {[...Array(8)].map((_, idx) => (
+            <Col key={idx}>
+              <ProductCardSkeleton />
+            </Col>
+          ))}
+        </Row>
+      </Container>
+    );
   }
 
   return (
@@ -107,7 +131,7 @@ const CustomerView = () => {
               </Form>
             </Col>
             <Col md={4} className="text-end">
-              <Button variant="outline-primary" onClick={() => alert('Cart coming soon!')}>
+              <Button variant="outline-primary" onClick={() => navigate('/cart')}>
                 🛒 Cart ({cartCount})
               </Button>
             </Col>
@@ -148,11 +172,13 @@ const CustomerView = () => {
         {error && <Alert variant="danger">{error}</Alert>}
 
         {products.length === 0 ? (
-          <div className="text-center py-5">
-            <div style={{ fontSize: '4rem' }}>📦</div>
-            <h2 className="mt-3">No Products Found</h2>
-            <p className="text-muted">Try adjusting your search or filters</p>
-          </div>
+          <EmptyProductsState 
+            message={selectedCategory ? "No products in this category" : "No products available"}
+            action={selectedCategory && (() => {
+              setSelectedCategory(null);
+              loadInitialData();
+            })}
+          />
         ) : (
           <Row xs={1} sm={2} md={3} lg={4} className="g-4">
             {products.map((product) => (
@@ -178,11 +204,11 @@ const CustomerView = () => {
                       {product.name}
                     </Card.Title>
                     <div className="mb-2">
-                      <strong className="text-primary fs-5">${product.price}</strong>
+                      <strong className="text-primary fs-5">{formatCurrency(product.price)}</strong>
                     </div>
                     <div className="mb-2">
                       {product.quantity > 0 ? (
-                        <Badge bg="success">In Stock</Badge>
+                        <Badge bg="success">In Stock ({product.quantity})</Badge>
                       ) : (
                         <Badge bg="danger">Out of Stock</Badge>
                       )}
@@ -202,10 +228,10 @@ const CustomerView = () => {
                     <Button
                       variant="primary"
                       className="mt-auto w-100"
-                      onClick={() => handleAddToCart(product.id)}
+                      onClick={() => handleAddToCart(product)}
                       disabled={product.quantity === 0}
                     >
-                      Add to Cart
+                      {product.quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
                     </Button>
                   </Card.Body>
                 </Card>

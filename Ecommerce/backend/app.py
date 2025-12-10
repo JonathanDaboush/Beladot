@@ -61,8 +61,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import logging
 import uuid
+import os
 
 from config import Settings
 from database import async_engine
@@ -75,7 +77,7 @@ from routers import (
     auth, cart, products, orders, customer_service, seller, transfer, finance, admin,
     checkout, payments, payroll, scheduling, leave, shipping, search, analytics, payment_methods, analyst,
     manager, employee, manager_approvals, cart_extended, checkout_extended, payments_extended,
-    scheduling_extended, payroll_extended, seller_extended, catalog, fulfillment
+    scheduling_extended, payroll_extended, seller_extended, catalog, fulfillment, upload, reviews, wishlist
 )
 
 # ============================================================================
@@ -335,8 +337,13 @@ app.include_router(payment_methods.router)  # Saved payment methods, wallet mana
 app.include_router(shipping.router)  # Shipping rates, carriers, tracking
 app.include_router(fulfillment.router)  # Order fulfillment, shipping labels, returns
 
+# File Upload
+app.include_router(upload.router)  # Product images, file uploads
+
 # Customer Support
 app.include_router(customer_service.router)  # Tickets, reviews, wishlists, returns
+app.include_router(reviews.router)  # Product reviews and ratings
+app.include_router(wishlist.router)  # User wishlist management
 
 # Seller Portal
 app.include_router(seller.router)  # Seller registration, products, orders, payouts
@@ -361,6 +368,15 @@ app.include_router(admin.router)
 app.include_router(manager.router)  # Manager operations, team management, approvals
 app.include_router(manager_approvals.router)  # Time-off approvals, shift change approvals
 app.include_router(employee.router)  # Employee portal, profile, schedules, payroll
+
+# Static file serving for uploads
+UPLOAD_DIR = os.getenv('UPLOAD_DIR', './uploads')
+if os.path.exists(UPLOAD_DIR):
+    app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+else:
+    logger.warning(f"Upload directory {UPLOAD_DIR} does not exist. Creating it...")
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 # ============================================================================

@@ -11,9 +11,9 @@ const authService = {
     return response.data;
   },
 
-  // Register
+  // Register (signup)
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
+    const response = await api.post('/auth/signup', userData);
     return response.data;
   },
 
@@ -56,8 +56,20 @@ const authService = {
   },
 
   // Update profile
-  updateProfile: async (userId, profileData) => {
-    const response = await api.put(`/auth/users/${userId}`, profileData);
+  updateProfile: async (profileData) => {
+    const response = await api.put('/auth/me', profileData);
+    return response.data;
+  },
+
+  // Refresh token
+  refreshToken: async (refreshToken) => {
+    const response = await api.post('/auth/refresh', { refresh_token: refreshToken });
+    return response.data;
+  },
+
+  // Get CSRF token
+  getCsrfToken: async () => {
+    const response = await api.get('/auth/csrf-token');
     return response.data;
   },
 };
