@@ -67,6 +67,10 @@ class CatalogService:
         })
         return db_prod
     
+    async def get_product_by_id(self, product_id: UUID):
+        """Get a product by ID"""
+        return await self.product_repo.get_by_id(product_id)
+    
     async def update_product(self, product_id: UUID, patch: dict, actor_id=None):
         db_prod = await self.product_repo.get_by_id(product_id)
         if not db_prod:

@@ -87,7 +87,7 @@ async def upload_product_image(
     Upload product image (sellers can upload for their products, admins for any)
     Returns image URL and thumbnail URL
     """
-    from Services.ProductService import ProductService
+    from Services.CatalogService import CatalogService
     from Models.ProductImage import ProductImage
     from sqlalchemy import select
     
@@ -110,8 +110,8 @@ async def upload_product_image(
     await file.seek(0)
     
     # Verify product ownership
-    product_service = ProductService(db)
-    product = await product_service.get_product_by_id(product_id)
+    catalog_service = CatalogService(db)
+    product = await catalog_service.get_product_by_id(product_id)
     
     if not product:
         raise HTTPException(
@@ -173,7 +173,7 @@ async def upload_product_images_bulk(
     Upload multiple product images at once
     Returns list of uploaded image URLs
     """
-    from Services.ProductService import ProductService
+    from Services.CatalogService import CatalogService
     from Models.ProductImage import ProductImage
     
     if len(files) > 10:
@@ -183,8 +183,8 @@ async def upload_product_images_bulk(
         )
     
     # Verify product ownership
-    product_service = ProductService(db)
-    product = await product_service.get_product_by_id(product_id)
+    catalog_service = CatalogService(db)
+    product = await catalog_service.get_product_by_id(product_id)
     
     if not product:
         raise HTTPException(
