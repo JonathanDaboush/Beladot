@@ -97,6 +97,31 @@ async def db_session(test_engine):
             await session.close()
 
 
+# HTTP Client fixture for integration tests
+@pytest_asyncio.fixture
+async def async_client():
+    """Create httpx AsyncClient for API testing"""
+    from httpx import AsyncClient
+    from app import app
+    
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        yield client
+
+
+# HTTP Client fixture for integration tests
+@pytest_asyncio.fixture
+async def async_client():
+    """Create httpx AsyncClient for API testing"""
+    from httpx import AsyncClient, ASGITransport
+    import sys
+    sys.path.insert(0, os.path.join(backend_dir))
+    from app import app
+    
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
+
 # Sample test data fixtures
 @pytest.fixture
 def sample_employee_data():

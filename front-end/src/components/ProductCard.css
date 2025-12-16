@@ -1,0 +1,17 @@
+.product-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.product-card .card-img-top {
+  transition: opacity 0.2s;
+}
+
+.product-card:hover .card-img-top {
+  opacity: 0.9;
+}
