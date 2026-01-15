@@ -17,7 +17,7 @@ async def upload_image(file: UploadFile, background_tasks: BackgroundTasks):
     filename = safe_filename(file.filename)
     temp_path = os.path.join(UPLOAD_ROOT, f"temp_{filename}")
     final_path = os.path.join(UPLOAD_ROOT, filename)
-    try:
+        try:
         with open(temp_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
         os.rename(temp_path, final_path)
@@ -36,7 +36,7 @@ async def upload_product_image(product_id: int, file: UploadFile, background_tas
     filename = safe_filename(file.filename)
     temp_path = os.path.join(product_dir, f"temp_{filename}")
     final_path = os.path.join(product_dir, filename)
-    try:
+        try:
         with open(temp_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
         os.rename(temp_path, final_path)

@@ -31,3 +31,17 @@ Thumbs.db
 # Misc
 *.bak
 *.swp
+
+# Media & uploads
+backend/images/uploads/
+backend/images/product_images/
+backend/images/user_images/
+backend/images/variant_images/
+frontend/public/uploads/
+
+# Test cache
+.pytest_cache/
+
+# Temp files
+*.tmp
+*~

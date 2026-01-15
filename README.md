@@ -29,88 +29,50 @@ DivinaPopinaV2 is a full-stack mock e-commerce platform designed to demonstrate 
 divinaPopinaV2/
 ├── backend/           # Python backend (Quart, SQLAlchemy)
 │   ├── app.py         # Main backend app
-│   ├── controller/    # (Ready for real controllers)
-│   ├── model/         # Domain models
-│   ├── persistance/   # Database persistence logic
-│   ├── repository/    # Data access repositories
-│   ├── service/       # Business logic services
-│   ├── services/      # Utility and mock services
+│   ├── api/           # API routes only
+│   ├── services/      # Business logic only
+│   ├── repositories/  # DB access only
+│   ├── models/        # ORM only
+│   ├── schemas/       # Pydantic only
+│   ├── infrastructure/# Email, storage, external APIs
 │   └── ...
 ├── frontend/          # React frontend
 │   ├── public/
-│   ├── src/
-│   │   ├── api/       # All data access (no direct fetch in components)
-│   │   ├── hooks/     # Custom hooks for data/state
-│   │   ├── pages/     # Page components (thin, orchestrate only)
-│   │   └── ...
-│   ├── .gitignore     # Excludes node_modules, build, etc.
-│   └── ...
-├── .gitignore         # Excludes Python, OS, and editor artifacts
-└── README.md          # This file
+│   └── src/
+├── .env.example       # Example environment variables
+├── .gitignore         # Git ignore rules
+├── README.md          # Project overview and instructions
+├── ARCHITECTURE.md    # Architecture and boundaries
+├── SECURITY.md        # Security model and practices
+└── ...
 ```
 
 ---
 
-## .gitignore Hygiene
+## Setup
 
-- **frontend/.gitignore** excludes:
-  - `/node_modules` (never committed)
-  - `/build`, `/coverage`, and environment files
-- **.gitignore** (root) excludes:
-  - Python bytecode, venv, OS/editor files, logs, and Jupyter checkpoints
-- **Best Practice:**
-  - Always run `npm install` in frontend and `pip install -r requirements.txt` in backend after cloning.
-
----
-
-## How to Add Details / Configure
-
-### Frontend
-- All data must come from `src/api/` services.
-- Add new API endpoints in `src/api/` and corresponding hooks in `src/hooks/`.
-- Never use inline mock data or hardcoded arrays in components/pages.
-- Handle loading, error, and empty states in every page.
-- To add a new page:
-  1. Create a new file in `src/pages/`
-  2. Use hooks for data fetching
-  3. Render only based on `{ data, loading, error }`
-
-### Backend
-- Add new domain models in `backend/model/`.
-- Add new business logic in `backend/service/`.
-- Add new API endpoints in `backend/app.py` or in `backend/controller/` (if using blueprints).
-- All payment/finance/shipment logic is mocked in `backend/services/payment_service_mock.py`.
-- To add a real integration, create a new service and update the dependency injection in the app.
-
----
-
-## Deployment & Local Setup
-
-1. **Clone the repo:**
+1. Clone the repository
+2. Create a virtual environment and install dependencies:
    ```sh
-   git clone <repo-url>
-   cd divinaPopinaV2
-   ```
-2. **Install backend dependencies:**
-   ```sh
-   cd backend
+   python -m venv venv
+   source venv/bin/activate  # or venv\Scripts\activate on Windows
    pip install -r requirements.txt
    ```
-3. **Install frontend dependencies:**
-   ```sh
-   cd ../frontend
-   npm install
-   ```
-4. **Run backend:**
-   ```sh
-   cd ../backend
-   quart run --reload
-   ```
-5. **Run frontend:**
-   ```sh
-   cd ../frontend
-   npm start
-   ```
+3. Copy `.env.example` to `.env` and fill in required environment variables.
+
+## Environments
+- ENV=dev|test|prod (set in .env)
+
+## Run
+- Backend: `python -m backend.app`
+- Frontend: `cd frontend && npm install && npm start`
+
+## Test
+- Backend: `pytest`
+- Frontend: `cd frontend && npm test`
+
+## Deploy
+- See ARCHITECTURE.md and SECURITY.md for deployment and security notes.
 
 ---
 
