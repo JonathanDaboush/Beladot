@@ -1,29 +1,17 @@
-"""
-reimbursement.py
+from __future__ import annotations
 
-Model for reimbursement entity.
-Represents a reimbursement record, including incident, approval, and status details.
-"""
+from dataclasses import dataclass
+from typing import Optional
 
-from backend.models.model.enums import ReimbursementStatus
 
+@dataclass(slots=True)
 class Reimbursement:
-    def __init__(self, reimbursement_id, incident_id, description, response=None, amount_approved=None, status=ReimbursementStatus.PENDING, deleted=False):
-        """
-        Initialize Reimbursement.
-        Args:
-            reimbursement_id (int): Unique identifier for the reimbursement.
-            incident_id (int): Associated incident ID.
-            description (str): Description of the reimbursement.
-            response (str, optional): Response to the reimbursement.
-            amount_approved (float, optional): Approved amount.
-            status (ReimbursementStatus, optional): Status of the reimbursement.
-            deleted (bool, optional): Whether the reimbursement is deleted.
-        """
-        self.reimbursement_id = reimbursement_id
-        self.incident_id = incident_id
-        self.description = description
-        self.response = response
-        self.amount_approved = amount_approved
-        self.status = status
-        self.deleted = deleted
+    reimbursement_id: int
+    incident_id: int
+    description: Optional[str]
+    response: Optional[str]
+    amount_approved: Optional[float]
+    status: bool
+    status_addressed: bool
+    paid_all: bool
+    deleted: bool

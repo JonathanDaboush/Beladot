@@ -29,9 +29,7 @@ class EmployeeRepository:
         await self.db.commit()
         result = await self.db.execute(select(Employee).where(Employee.emp_id == emp_id))
         return result.scalar_one_or_none()
-    def __init__(self, db):
-        """Initialize repository with DB session."""
-        self.db = db
+    
 
     async def get_by_id(self, emp_id):
         """Async retrieve an employee by their ID."""

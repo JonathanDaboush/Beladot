@@ -8,9 +8,9 @@ Repository class for managing SellerPayout entities in the database.
 Provides async method for retrieving seller payouts by ID.
 """
 
-from backend.models.model.seller_payout import SellerPayout
+from backend.persistance.seller_payout import SellerPayout
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class SellerPayoutRepository:
     def __init__(self, db: AsyncSession):

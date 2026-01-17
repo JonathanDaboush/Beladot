@@ -1,12 +1,13 @@
 """
 domain_event.py
 
-Defines domain event types and the DomainEvent model for event-driven operations.
-Used for tracking and handling business events such as refunds and shipment status changes.
+Domain event types and model for event-driven operations.
 """
 
 from enum import Enum
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Dict, Optional
 
 class DomainEventType(Enum):
     REFUND_APPROVED = 'refund_approved'
@@ -14,21 +15,11 @@ class DomainEventType(Enum):
     SHIPMENT_STATUS_CHANGED = 'shipment_status_changed'
     SHIPMENT_ITEM_STATUS_CHANGED = 'shipment_item_status_changed'
     SHIPMENT_EVENT_STATUS_CHANGED = 'shipment_event_status_changed'
-    # Add more as needed
 
+@dataclass(slots=True)
 class DomainEvent:
-    def __init__(self, event_type, entity_id, actor, payload, timestamp=None):
-        """
-        Initialize DomainEvent.
-        Args:
-            event_type (DomainEventType): Type of the event.
-            entity_id (int): ID of the affected entity.
-            actor (str): Actor who triggered the event.
-            payload (dict): Event-specific data.
-            timestamp (datetime, optional): Event timestamp.
-        """
-        self.event_type = event_type
-        self.entity_id = entity_id
-        self.actor = actor
-        self.payload = payload  # dict of event-specific data
-        self.timestamp = timestamp or datetime.utcnow()
+    event_type: DomainEventType
+    entity_id: int
+    actor: str
+    payload: Dict
+    timestamp: Optional[datetime] = None

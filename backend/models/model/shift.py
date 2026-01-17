@@ -1,27 +1,16 @@
-"""
-shift.py
+from __future__ import annotations
 
-Model for shift entity.
-Represents a work shift, including assignment, timing, and status.
-"""
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional
 
+
+@dataclass(slots=True)
 class Shift:
-    def __init__(self, shift_id, department_id, assigned_emp_id, start_time, end_time, created_by_manager_id, status):
-        """
-        Initialize Shift.
-        Args:
-            shift_id (int): Unique identifier for the shift.
-            department_id (int): Associated department ID.
-            assigned_emp_id (int): Employee ID assigned to the shift.
-            start_time (datetime): Shift start time.
-            end_time (datetime): Shift end time.
-            created_by_manager_id (int): Manager ID who created the shift.
-            status (str): Status of the shift.
-        """
-        self.shift_id = shift_id
-        self.department_id = department_id
-        self.assigned_emp_id = assigned_emp_id
-        self.start_time = start_time
-        self.end_time = end_time
-        self.created_by_manager_id = created_by_manager_id
-        self.status = status
+    shift_id: int
+    department_id: int
+    assigned_emp_id: int
+    start_time: datetime
+    end_time: datetime
+    created_by_manager_id: int
+    status: str

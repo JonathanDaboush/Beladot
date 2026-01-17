@@ -8,7 +8,7 @@
 
 from backend.persistance.seller_component import SellerComponent
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class SellerComponentRepository:
     """

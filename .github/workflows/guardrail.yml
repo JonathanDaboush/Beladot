@@ -1,0 +1,29 @@
+name: Guardrail Checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Fail on `.query(` usage in backend
+        run: |
+          set -e
+          # Exclude tests and migrations
+          if grep -R --line-number --exclude-dir=backend/tests --exclude-dir=migrations '\.query\(' backend/; then
+            echo "Found forbidden .query( usage under backend/."
+            grep -R --line-number --exclude-dir=backend/tests --exclude-dir=migrations '\.query\(' backend/
+            exit 1
+          fi
+      - name: Fail on sqlalchemy.future imports
+        run: |
+          set -e
+          if grep -R --line-number --exclude-dir=backend/tests --exclude-dir=migrations "from sqlalchemy.future import" backend/; then
+            echo "Found forbidden sqlalchemy.future import under backend/."
+            grep -R --line-number --exclude-dir=backend/tests --exclude-dir=migrations "from sqlalchemy.future import" backend/
+            exit 1
+          fi

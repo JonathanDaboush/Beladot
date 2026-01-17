@@ -8,7 +8,7 @@
 
 from backend.persistance.employee_component import EmployeeComponent
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class EmployeeComponentRepository:
     """

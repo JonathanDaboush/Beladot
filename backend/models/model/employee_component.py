@@ -1,3 +1,11 @@
-from backend.persistance.employee_component import EmployeeComponent
+from __future__ import annotations
 
-__all__ = ["EmployeeComponent"]
+from dataclasses import dataclass
+
+
+@dataclass(slots=True)
+class EmployeeComponent:
+	id: int
+	img_url: str
+	description: str
+	department_id: int

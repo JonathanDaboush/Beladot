@@ -1,4 +1,13 @@
 
-from backend.persistance.employee import Employee  # re-export canonical ORM model
+from __future__ import annotations
 
-__all__ = ["Employee"]
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass(slots=True)
+class Employee:
+	emp_id: int
+	user_id: int
+	department_id: int
+	notes: Optional[str]

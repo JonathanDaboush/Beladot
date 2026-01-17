@@ -5,9 +5,9 @@ Repository class for managing SellerExpense entities in the database.
 Provides async CRUD operations for seller expenses.
 """
 
-from backend.models.model.sellers_expense import SellerExpense
+from backend.persistance.sellers_expense import SellerExpense
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class SellerExpenseRepository:
     def __init__(self, db: AsyncSession):

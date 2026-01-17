@@ -11,9 +11,9 @@ Repository class for managing ShipmentItem entities in the database.
 Provides async CRUD operations for shipment items.
 """
 
-from backend.models.model.shipment_item import ShipmentItem
+from backend.persistance.shipment_item import ShipmentItem
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ShipmentItemRepository:
     def __init__(self, db: AsyncSession):

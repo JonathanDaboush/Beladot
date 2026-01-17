@@ -6,9 +6,9 @@
 # Provides async CRUD methods and stock management for product variants.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.product_variant import ProductVariant
+from backend.persistance.product_variant import ProductVariant
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ProductVariantRepository:
     """

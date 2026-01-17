@@ -25,3 +25,11 @@
 ---
 
 See README.md for setup and SECURITY.md for security model.
+
+## Guardrails
+
+- **Repositories**: Do not use `.query()` on `AsyncSession`. Use `select()` + `execute()` and `scalars()`.
+- **Async Sessions**: Obtain sessions from `backend.persistance.async_base.AsyncSessionLocal` only.
+- **Imports**: Use `from sqlalchemy import select` (SQLAlchemy v2 style). Avoid `sqlalchemy.future`.
+- **Schemas**: In Pydantic v2, avoid `constr(...)` in type hints. Prefer `Optional[str]` with `Field(min_length=..., max_length=...)`.
+- **Separation**: Domain models are pure dataclasses; ORM models live under `backend/persistance`.

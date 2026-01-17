@@ -6,9 +6,9 @@
 # Provides async methods for retrieving payment snapshots by order number.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.payment_snapshot import PaymentSnapshot
+from backend.persistance.payment_snapshot import PaymentSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class PaymentSnapshotRepository:
     """

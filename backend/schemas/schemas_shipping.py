@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, constr
+from pydantic import BaseModel, Field
 from typing import Optional, Literal
 
 class ShipmentCreate(BaseModel):
@@ -17,7 +17,7 @@ class ShipmentResponse(BaseModel):
 class ShipmentEventCreate(BaseModel):
     shipment_id: int = Field(..., gt=0)
     event_type: Literal["picked_up","scanned","out_for_delivery","delivered","issue"]
-    description: Optional[constr(strip_whitespace=True, min_length=1, max_length=500)] = None
+    description: Optional[str] = Field(default=None, min_length=1, max_length=500)
 
 class ShipmentEventResponse(BaseModel):
     id: int

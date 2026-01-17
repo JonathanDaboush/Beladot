@@ -6,9 +6,9 @@
 # Provides async CRUD methods for product variant images and variant-specific queries.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.product_variant_image import ProductVariantImage
+from backend.persistance.product_variant_image import ProductVariantImage
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ProductVariantImageRepository:
     """

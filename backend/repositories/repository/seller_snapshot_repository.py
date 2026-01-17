@@ -8,9 +8,9 @@ Repository class for managing SellerSnapshot entities in the database.
 Provides async method for retrieving seller snapshots by store name.
 """
 
-from backend.models.model.seller_snapshot import SellerSnapshot
+from backend.persistance.seller_snapshot import SellerSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class SellerSnapshotRepository:
     def __init__(self, db: AsyncSession):

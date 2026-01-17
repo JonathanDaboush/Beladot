@@ -1,28 +1,21 @@
 """
-department.py
+Department (domain model)
 
-SQLAlchemy model for Department entity.
-Represents a business department and its relationships to employee components.
+Pure domain representation of a business department.
+This model is intentionally decoupled from the ORM layer
+located under backend/persistance.
 """
 
-from sqlalchemy.orm import relationship
+from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    pass
+
+
+@dataclass(slots=True)
 class Department:
-    """
-    Department model representing a business department.
-    Attributes:
-        department_id (int): Unique identifier for the department.
-        name (str): Name of the department.
-        employee_components (list): Related employee components.
-    """
-    def __init__(self, department_id, name):
-        """
-        Initialize Department with ID and name.
-        Args:
-            department_id (int): Unique identifier for the department.
-            name (str): Name of the department.
-        """
-        self.department_id = department_id
-        self.name = name
-    # SQLAlchemy ORM relationship for employee components
-    employee_components = relationship('EmployeeComponent', back_populates='department')
+    department_id: int
+    name: str

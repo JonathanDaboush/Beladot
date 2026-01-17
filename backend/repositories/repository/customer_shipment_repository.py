@@ -8,7 +8,7 @@
 
 from backend.persistance.customer_shipment import CustomerShipment
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class CustomerShipmentRepository:
     """

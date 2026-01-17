@@ -1,27 +1,13 @@
-"""
-product_variant.py
+from __future__ import annotations
 
-Model for product variant entity.
-Represents a specific variant of a product, including price, stock, and availability.
-"""
+from dataclasses import dataclass
 
-from backend.models.model.enums import AvailabilityStatus
 
+@dataclass(slots=True)
 class ProductVariant:
-    def __init__(self, variant_id, product_id, name, price, stock, is_available=AvailabilityStatus.AVAILABLE):
-        """
-        Initialize ProductVariant.
-        Args:
-            variant_id (int): Unique identifier for the variant.
-            product_id (int): Associated product ID.
-            name (str): Name of the variant.
-            price (float): Price of the variant.
-            stock (int): Stock quantity.
-            is_available (AvailabilityStatus, optional): Availability status.
-        """
-        self.variant_id = variant_id
-        self.product_id = product_id
-        self.name = name
-        self.price = price
-        self.stock = stock
-        self.is_available = is_available
+    variant_id: int
+    product_id: int
+    variant_name: str
+    price: float
+    quantity: int
+    is_active: bool

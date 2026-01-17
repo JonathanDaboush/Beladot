@@ -6,17 +6,23 @@
 # Provides async methods for retrieving categories by ID.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.category import Category
+from typing import Optional
+from backend.persistance.category import Category
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 class CategoryRepository:
     """
     Repository for Category model.
     Provides async methods to retrieve categories by ID.
     """
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         """Initialize repository with DB session."""
         self.db = db
 
-    async def get_by_id(self, category_id):
+    async def get_by_id(self, category_id: int) -> Optional[Category]:
         """Retrieve a category by its ID."""
-        return await self.db.query(Category).filter(Category.category_id == category_id).first()
+        result = await self.db.execute(
+            select(Category).filter(Category.category_id == category_id)
+        )
+        return result.scalars().first()

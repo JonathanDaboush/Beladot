@@ -5,17 +5,19 @@ Service layer for seller operations, including product creation, variant managem
 All repository and model operations use a db session that is request-scoped and managed by the caller (not global).
 """
 from backend.repositories.repository.product_repository import ProductRepository
-from backend.models.model.product import Product
+from backend.persistance.product import Product
 from backend.repositories.repository.product_comment_repository import ProductCommentRepository
 from backend.repositories.repository.order_repository import OrderRepository
 from backend.repositories.repository.product_variant_repository import ProductVariantRepository
-from backend.models.model.product_variant import ProductVariant
+from backend.persistance.product_variant import ProductVariant
 from backend.repositories.repository.product_image_repository import ProductImageRepository
-from backend.models.model.product_image import ProductImage
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from backend.persistance.product_image import ProductImage
 from backend.repositories.repository.product_variant_repository import ProductVariantRepository
 from backend.repositories.repository.seller_payout_repository import SellerPayoutRepository
-from backend.models.model.product import Product
-from backend.models.model.product_variant import ProductVariant
+from backend.persistance.product import Product
+from backend.persistance.product_variant import ProductVariant
 from backend.repositories.repository.product_image_repository import ProductImageRepository
         
 import os
@@ -43,7 +45,7 @@ async def create_product(self, product_data):
     )
     product = await repo.save(product)
     from backend.repositories.repository.product_variant_image_repository import ProductVariantImageRepository
-    from backend.models.model.product_variant_image import ProductVariantImage
+    from backend.persistance.product_variant_image import ProductVariantImage
     # Save variants if provided
     variants = product_data.get('variants', [])
     for v in variants:
@@ -92,7 +94,7 @@ async def edit_product(self, product):
     updated_product = await repo.update(product_id, **update_fields)
     import os
     from backend.repositories.repository.product_variant_image_repository import ProductVariantImageRepository
-    from backend.models.model.product_variant_image import ProductVariantImage
+    from backend.persistance.product_variant_image import ProductVariantImage
     # Update or add variants and their images
     variants = product.get('variants', [])
     variant_image_repo = ProductVariantImageRepository(db)
@@ -162,7 +164,9 @@ async def edit_product(self, product):
             )
             await image_repo.save(image)
     # Return product, all variants, and images
-    all_variants = await db.query(ProductVariant).filter(ProductVariant.product_id == product_id).all()
+    from sqlalchemy import select
+    all_variants_res = await db.execute(select(ProductVariant).filter(ProductVariant.product_id == product_id))
+    all_variants = all_variants_res.scalars().all()
     all_images = await image_repo.get_by_product_id(product_id)
     return {'product': updated_product, 'variants': all_variants, 'images': all_images}
 
@@ -176,7 +180,8 @@ async def delete_product(self, product_id):
     variant_repo = ProductVariantRepository(db)
     variant_image_repo = ProductVariantImageRepository(db)
     # Delete all variants and their images/folders for this product
-    variants = await db.query(ProductVariant).filter(ProductVariant.product_id == pid).all()
+    variants_res = await db.execute(select(ProductVariant).filter(ProductVariant.product_id == pid))
+    variants = variants_res.scalars().all()
     for v in variants:
         # Delete variant images from DB and folder
         variant_images = await variant_image_repo.get_by_variant_id(v.variant_id)
@@ -222,7 +227,9 @@ async def get_product(self, product_id):
     product = await repo.get_by_id(pid)
     from backend.repositories.repository.product_variant_repository import ProductVariantRepository
     variant_repo = ProductVariantRepository(db)
-    variants = await db.query(ProductVariant).filter(ProductVariant.product_id == pid).all()
+    from sqlalchemy import select
+    variants_res = await db.execute(select(ProductVariant).filter(ProductVariant.product_id == pid))
+    variants = variants_res.scalars().all()
     # Get product images
     from backend.repositories.repository.product_image_repository import ProductImageRepository
     image_repo = ProductImageRepository(db)
@@ -241,10 +248,12 @@ async def get_all_products(self):
     repo = ProductRepository(db)
     from backend.repositories.repository.product_variant_repository import ProductVariantRepository
     variant_repo = ProductVariantRepository(db)
-    products = await repo.db.query(Product).all()
+    products_res = await repo.db.execute(select(Product))
+    products = products_res.scalars().all()
     result = []
     for p in products:
-        variants = await repo.db.query(ProductVariant).filter(ProductVariant.product_id == p.product_id).all()
+        variants_res = await repo.db.execute(select(ProductVariant).filter(ProductVariant.product_id == p.product_id))
+        variants = variants_res.scalars().all()
         variant_image_repo = ProductVariantImageRepository(db)
         variants_with_images = []
         for v in variants:
@@ -265,14 +274,15 @@ async def respond_to_comment(self,data):
     await db.commit()
     return comment
 
-def analyze_orders_for_product(db, seller_id, product_id=None, age_range=None, sex=None, start_date=None, end_date=None, analysis_func=None, **analysis_kwargs):
+async def analyze_orders_for_product(db: AsyncSession, seller_id, product_id=None, age_range=None, sex=None, start_date=None, end_date=None, analysis_func=None, **analysis_kwargs):
     order_repo = OrderRepository(db)
     # Only use non-deleted, seller-owned products
     product_repo = ProductRepository(db)
-    valid_products = db.query(Product).filter(Product.seller_id == seller_id, Product.is_deleted == False).all()
+    result = await db.execute(select(Product).filter(Product.seller_id == seller_id, Product.is_deleted == False))
+    valid_products = result.scalars().all()
     valid_product_ids = [p.product_id for p in valid_products]
     # Only use non-deleted, non-refunded orders
-    orders = order_repo.filter_orders(
+    orders = await order_repo.filter_orders(
         product_id=product_id if product_id in valid_product_ids else None,
         age_range=age_range,
         sex=sex,
@@ -282,23 +292,22 @@ def analyze_orders_for_product(db, seller_id, product_id=None, age_range=None, s
 
 
 
-from typing import Union
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
-DBSession = Union[AsyncSession, Session]
-
-async def get_seller_payout(self, seller_id, year, month, db: DBSession):
+async def get_seller_payout(self, seller_id, year, month, db: AsyncSession):
     repo = SellerPayoutRepository(db)
-    payout = await repo.db.query(repo.model).filter(
-        repo.model.seller_id == seller_id,
-        repo.model.payout_date.year == year,
-        repo.model.payout_date.month == month,
-        repo.model.is_deleted == False
-    ).first()
+    payout_result = await repo.db.execute(
+        select(repo.model).filter(
+            repo.model.seller_id == seller_id,
+            repo.model.payout_date.year == year,
+            repo.model.payout_date.month == month,
+            repo.model.is_deleted == False
+        )
+    )
+    payout = payout_result.scalars().first()
     # Calculate sum of non-deleted, non-refunded orders for this seller and month
     order_repo = OrderRepository(db)
     product_repo = ProductRepository(db)
-    valid_products = db.query(Product).filter(Product.seller_id == seller_id, Product.is_deleted == False).all()
+    result_products = await db.execute(select(Product).filter(Product.seller_id == seller_id, Product.is_deleted == False))
+    valid_products = result_products.scalars().all()
     valid_product_ids = [p.product_id for p in valid_products]
     orders = await order_repo.filter_orders()
     filtered_orders = [o for o in orders if o.product_id in valid_product_ids and not getattr(o, 'is_deleted', False) and getattr(o, 'status', '').lower() != 'refunded' and getattr(o, 'created_at', None) and o.created_at.year == year and o.created_at.month == month]
@@ -307,17 +316,18 @@ async def get_seller_payout(self, seller_id, year, month, db: DBSession):
         raise ValueError(f"Payout total ({payout.total}) does not match sum of orders ({order_sum}) for seller {seller_id} in {year}-{month}.")
     return payout
 
-async def search_products_for_seller(self, seller_id, db: DBSession, keywords=None, category_id=None, subcategory_id=None, min_price=None, max_price=None):
-    query = db.query(Product).filter(Product.seller_id == seller_id)
+async def search_products_for_seller(self, seller_id, db: AsyncSession, keywords=None, category_id=None, subcategory_id=None, min_price=None, max_price=None):
+    base = select(Product).filter(Product.seller_id == seller_id)
     if category_id:
-        query = query.filter(Product.category_id == category_id)
+        base = base.filter(Product.category_id == category_id)
     if subcategory_id:
-        query = query.filter(Product.subcategory_id == subcategory_id)
+        base = base.filter(Product.subcategory_id == subcategory_id)
     if min_price is not None:
-        query = query.filter(Product.price >= min_price)
+        base = base.filter(Product.price >= min_price)
     if max_price is not None:
-        query = query.filter(Product.price <= max_price)
-    products = await query.all()
+        base = base.filter(Product.price <= max_price)
+    products_result = await db.execute(base)
+    products = products_result.scalars().all()
     result = []
     keyword_set = set()
     if keywords:
@@ -351,17 +361,18 @@ async def search_products_for_seller(self, seller_id, db: DBSession, keywords=No
     # Optionally add pagination info if needed by frontend contract
     return result
 
-async def search_products_for_customer(self, db: DBSession, keywords=None, category_id=None, subcategory_id=None, min_price=None, max_price=None):
-    query = db.query(Product)
+async def search_products_for_customer(self, db: AsyncSession, keywords=None, category_id=None, subcategory_id=None, min_price=None, max_price=None):
+    base = select(Product)
     if category_id:
-        query = query.filter(Product.category_id == category_id)
+        base = base.filter(Product.category_id == category_id)
     if subcategory_id:
-        query = query.filter(Product.subcategory_id == subcategory_id)
+        base = base.filter(Product.subcategory_id == subcategory_id)
     if min_price is not None:
-        query = query.filter(Product.price >= min_price)
+        base = base.filter(Product.price >= min_price)
     if max_price is not None:
-        query = query.filter(Product.price <= max_price)
-    products = await query.all()
+        base = base.filter(Product.price <= max_price)
+    products_result = await db.execute(base)
+    products = products_result.scalars().all()
     result = []
     keyword_set = set()
     if keywords:

@@ -11,7 +11,7 @@ Provides async methods for retrieving shifts by ID and by employee/time range.
 
 from backend.persistance.shift import Shift
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ShiftRepository:
     def __init__(self, db: AsyncSession):

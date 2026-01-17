@@ -6,9 +6,9 @@
 # Provides async CRUD methods for product images and product-specific queries.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.product_image import ProductImage
+from backend.persistance.product_image import ProductImage
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ProductImageRepository:
     """

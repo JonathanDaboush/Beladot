@@ -10,9 +10,9 @@ Repository class for managing ReimbursementSnapshot entities in the database.
 Provides async CRUD operations for reimbursement snapshots by employee name.
 """
 
-from backend.models.model.reimbursement_snapshot import ReimbursementSnapshot
+from backend.persistance.reimbursement_snapshot import ReimbursementSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ReimbursementSnapshotRepository:
     def __init__(self, db: AsyncSession):

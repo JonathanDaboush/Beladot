@@ -11,6 +11,7 @@ from sqlalchemy import Column, BigInteger, Numeric, Text, DateTime, Enum, Foreig
 from sqlalchemy.orm import relationship
 from .base import Base
 from .enums import RefundStatusEnum
+from . import payment  # ensure payment table is registered in metadata
 
 class Refund(Base):
     """

@@ -7,9 +7,9 @@ Repository class for managing Reimbursement entities in the database.
 Provides async CRUD operations and incident-based queries for reimbursements.
 """
 
-from backend.models.model.reimbursement import Reimbursement
+from backend.persistance.reimbursement import Reimbursement
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ReimbursementRepository:
     def __init__(self, db: AsyncSession):

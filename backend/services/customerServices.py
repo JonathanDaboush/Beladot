@@ -6,12 +6,11 @@ All operations are asynchronous and require a database session.
 """
 
 # Remove invalid ...existing code... and ensure all necessary imports are present
-from typing import Union
+from typing import Optional, Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
-DBSession = Union[AsyncSession, Session]
+from sqlalchemy import select
 
-async def deactivate_user_account(db: DBSession):
+async def deactivate_user_account(db: AsyncSession) -> tuple[bool, Optional[str]]:
     """
     Deactivate a user account (set account_status to False) and clear their cart and wishlist.
     Args:
@@ -31,9 +30,11 @@ async def deactivate_user_account(db: DBSession):
     # Clear cart
     cart_repo = CartRepository(db)
     cart_item_repo = CartItemRepository(db)
-    cart = await db.query(Cart).filter(Cart.user_id == user_id).first()
+    cart_result = await db.execute(select(Cart).filter(Cart.user_id == user_id))
+    cart = cart_result.scalars().first()
     if cart:
-        cart_items = await db.query(CartItem).filter(CartItem.cart_id == cart.cart_id).all()
+        cart_items_result = await db.execute(select(CartItem).filter(CartItem.cart_id == cart.cart_id))
+        cart_items = cart_items_result.scalars().all()
         for item in cart_items:
             await db.delete(item)
         await db.commit()
@@ -41,9 +42,11 @@ async def deactivate_user_account(db: DBSession):
     # Clear wishlist
     wishlist_repo = WishlistRepository(db)
     wishlist_item_repo = WishlistItemRepository(db)
-    wishlist = await db.query(Wishlist).filter(Wishlist.user_id == user_id).first()
+    wishlist_result = await db.execute(select(Wishlist).filter(Wishlist.user_id == user_id))
+    wishlist = wishlist_result.scalars().first()
     if wishlist:
-        wishlist_items = await db.query(WishlistItem).filter(WishlistItem.wishlist_id == wishlist.wishlist_id).all()
+        wishlist_items_result = await db.execute(select(WishlistItem).filter(WishlistItem.wishlist_id == wishlist.wishlist_id))
+        wishlist_items = wishlist_items_result.scalars().all()
         for item in wishlist_items:
             await db.delete(item)
         await db.commit()
@@ -57,7 +60,7 @@ async def deactivate_user_account(db: DBSession):
             pass  # Email failure should not block deactivation
     return True, None
 from backend.repositories.repository.refund_request_repository import RefundRequestRepository
-from backend.models.model.refund_request import RefundRequest
+from backend.persistance.refund_request import RefundRequest
 from backend.persistance.enums import RefundRequestStatusEnum
 
 import re
@@ -65,7 +68,7 @@ import datetime
 import os
 import shutil
 from sqlalchemy.exc import SQLAlchemyError
-from backend.models.model.user import User
+from backend.persistance.user import User
 from backend.persistance.enums import SellerStatusEnum
 from backend.repositories.repository.user_repository import UserRepository
 from backend.repositories.repository.cart_repository import CartRepository
@@ -73,33 +76,34 @@ from backend.repositories.repository.cart_item_repository import CartItemReposit
 from backend.repositories.repository.product_repository import ProductRepository
 from backend.repositories.repository.wishlist_repository import WishlistRepository
 from backend.repositories.repository.wishlist_item_repository import WishlistItemRepository
-from backend.models.model.cart import Cart
-from backend.models.model.cart_item import CartItem
-from backend.models.model.wishlist import Wishlist
-from backend.models.model.wishlist_item import WishlistItem
+from backend.persistance.cart import Cart
+from backend.persistance.cart_item import CartItem
+from backend.persistance.wishlist import Wishlist
+from backend.persistance.wishlist_item import WishlistItem
+from sqlalchemy import select
 from backend.repositories.repository.user_finance_repository import UserFinanceRepository
-from backend.models.model.user_finance import UserFinance
+from backend.persistance.user_finance import UserFinance
 from backend.repositories.repository.customer_shipment_repository import CustomerShipmentRepository
 from backend.persistance.customer_shipment import CustomerShipment
 from backend.repositories.repository.product_variant_repository import ProductVariantRepository
 from backend.repositories.repository.product_image_repository import ProductImageRepository
 from backend.repositories.repository.product_variant_image_repository import ProductVariantImageRepository
-from backend.models.model.order import Order
+from backend.persistance.order import Order
 from backend.repositories.repository.order_repository import OrderRepository
-from backend.models.model.order_item import OrderItem
+from backend.persistance.order_item import OrderItem
 from backend.repositories.repository.order_item_repository import OrderItemRepository
-from backend.models.model.shipment import Shipment
+from backend.persistance.shipment import Shipment
 from backend.repositories.repository.shipment_repository import ShipmentRepository
-from backend.models.model.shipment_item import ShipmentItem
+from backend.persistance.shipment_item import ShipmentItem
 from backend.repositories.repository.shipment_item_repository import ShipmentItemRepository
-from backend.models.model.shipment_event import ShipmentEvent
+from backend.persistance.shipment_event import ShipmentEvent
 from backend.repositories.repository.shipment_event_repository import ShipmentEventRepository
-from backend.models.model.product_rating import ProductRating
+from backend.persistance.product_rating import ProductRating
 from backend.repositories.repository.product_rating_repository import ProductRatingRepository
     
 import asyncio
 
-async def handle_payment_info(purchase_data, db: DBSession):
+async def handle_payment_info(purchase_data: dict, db: AsyncSession):
     payment_info = purchase_data.get('payment_info')
     save_payment_method = purchase_data.get('save_payment_method', False)
     if not payment_info:
@@ -126,7 +130,7 @@ async def handle_payment_info(purchase_data, db: DBSession):
             return None, False, f'Failed to save payment method: {str(e)}'
     return user_finance, True, None
 
-async def handle_shipment_info(purchase_data, db: DBSession):
+async def handle_shipment_info(purchase_data: dict, db: AsyncSession):
     shipment_info = purchase_data.get('shipment_info')
     save_shipment = purchase_data.get('save_shipment', False)
     if not shipment_info:
@@ -148,7 +152,7 @@ async def handle_shipment_info(purchase_data, db: DBSession):
             return None, False, f'Failed to save shipment info: {str(e)}'
     return customer_shipment, True, None
 
-async def create_order_and_items(purchase_data, db: DBSession, cart_items, total_amount):
+async def create_order_and_items(purchase_data: dict, db: AsyncSession, cart_items, total_amount):
     user_id = g.user['user_id']
     order_repo = OrderRepository(db)
     order_number = f"ORD{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}{user_id}"
@@ -195,7 +199,7 @@ async def create_order_and_items(purchase_data, db: DBSession, cart_items, total
         return None, False, f'Order item creation failed: {str(e)}'
     return order, order_items, True, None
 
-async def deduct_inventory(order_items, db: DBSession):
+async def deduct_inventory(order_items, db: AsyncSession):
     product_repo = ProductRepository(db)
     product_variant_repo = ProductVariantRepository(db)
     try:
@@ -212,7 +216,7 @@ async def deduct_inventory(order_items, db: DBSession):
         return False, f'Inventory deduction failed: {str(e)}'
     return True, None
 
-async def empty_cart(cart_items, db: DBSession):
+async def empty_cart(cart_items, db: AsyncSession):
     try:
         for item in cart_items:
             await db.delete(item['db_obj'])
@@ -342,8 +346,8 @@ def updateUser(user_data):
 
 from backend.repositories.repository.employee_repository import EmployeeRepository
 from backend.repositories.repository.seller_snapshot_repository import SellerSnapshotRepository
-from backend.models.model.employee import Employee
-from backend.models.model.seller_snapshot import SellerSnapshot
+from backend.persistance.employee import Employee
+from backend.persistance.seller_snapshot import SellerSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
 
 async def sighnIn(user_data, db: AsyncSession = None):
@@ -369,7 +373,8 @@ async def sighnIn(user_data, db: AsyncSession = None):
 
         # Check employee status
         emp_repo = EmployeeRepository(db)
-        employee = await db.query(Employee).filter(Employee.user_id == user.user_id).first()
+        emp_res = await db.execute(select(Employee).filter(Employee.user_id == user.user_id))
+        employee = emp_res.scalars().first()
         if employee:
             session_obj['isEmployee'] = True
             session_obj['department'] = getattr(employee, 'department_id', None)
@@ -381,7 +386,8 @@ async def sighnIn(user_data, db: AsyncSession = None):
 
         # Check seller status
         seller_repo = SellerSnapshotRepository(db)
-        seller = await db.query(SellerSnapshot).filter(SellerSnapshot.contact_email == user.email).first()
+        seller_res = await db.execute(select(SellerSnapshot).filter(SellerSnapshot.contact_email == user.email))
+        seller = seller_res.scalars().first()
         if seller:
             session_obj['isSeller'] = True
             session_obj['seller_store_name'] = getattr(seller, 'store_name', None)
@@ -496,7 +502,7 @@ def add_item_to_wishlist(user_id: int, product_id: int, quantity: int, db, wishl
     return wishlist_item
 
 # Get cart items with alerts
-def get_cart_items(db, cart_id=None, user_id=None):
+async def get_cart_items(db: AsyncSession, cart_id: Optional[int] = None, user_id: Optional[int] = None) -> Dict[str, Any]:
     # Accept user_id as argument for FastAPI context
     if user_id is None:
         return {'items': [], 'notes': ['No user_id provided.'], 'time': str(datetime.datetime.now())}
@@ -505,21 +511,22 @@ def get_cart_items(db, cart_id=None, user_id=None):
     product_repo = ProductRepository(db)
     product_variant_repo = ProductVariantRepository(db)
     product_image_repo = ProductImageRepository(db)
-    cart = cart_repo.get_by_id(cart_id) if cart_id else None
+    cart = await cart_repo.get_by_id(cart_id) if cart_id else None
     if not cart:
         return {'items': [], 'notes': ['No cart found for user.'], 'time': str(datetime.datetime.now())}
-    items = db.query(cart_item_repo.db.query(cart_item_repo.db.query()._entity_zero().class_)).filter_by(cart_id=cart.cart_id).all()
+    items_res = await db.execute(select(CartItem).filter(CartItem.cart_id == cart.cart_id))
+    items = items_res.scalars().all()
     notes = []
     result_items = []
     for item in items:
-        product = product_repo.get_by_id(item.product_id)
+        product = await product_repo.get_by_id(item.product_id)
         if not product:
             notes.append(f"Product {item.product_id} removed from cart at {datetime.datetime.now()}.")
-            db.delete(item)
-            db.commit()
+            await db.delete(item)
+            await db.commit()
             continue
         # Get product images
-        images = product_image_repo.get_by_product_id(product.product_id)
+        images = await product_image_repo.get_by_product_id(product.product_id)
         image_url = images[0].image_url if images else None
         # Get category/subcategory names if available
         category_name = getattr(product, 'category_id', None)
@@ -530,20 +537,20 @@ def get_cart_items(db, cart_id=None, user_id=None):
         variant_image_url = None
         price = product.price
         if item.variant_id:
-            variant = product_variant_repo.get_by_id(item.variant_id)
+            variant = await product_variant_repo.get_by_id(item.variant_id)
             if variant:
                 variant_name = getattr(variant, 'name', None)
                 price = getattr(variant, 'price', price)
                 # Try to get variant image
                 from backend.repositories.repository.product_variant_image_repository import ProductVariantImageRepository
                 variant_image_repo = ProductVariantImageRepository(db)
-                variant_images = variant_image_repo.get_by_variant_id(variant.variant_id)
+                variant_images = await variant_image_repo.get_by_variant_id(variant.variant_id)
                 variant_image_url = variant_images[0].image_url if variant_images else None
         # Stock check
         if item.quantity > product.stock:
             notes.append(f"Product {item.product_id} quantity reduced to {product.stock} at {datetime.datetime.now()}.")
             item.quantity = product.stock
-            db.commit()
+            await db.commit()
         result_items.append({
             'product_id': item.product_id,
             'product_name': product.name,
@@ -559,28 +566,29 @@ def get_cart_items(db, cart_id=None, user_id=None):
     return {'items': result_items, 'notes': notes}
 
 # Get wishlist items with alerts
-def get_wishlist_items(db, wishlist_id=None):
+async def get_wishlist_items(db: AsyncSession, wishlist_id: Optional[int] = None) -> Dict[str, Any]:
     user_id = g.user['user_id']
     wishlist_repo = WishlistRepository(db)
     wishlist_item_repo = WishlistItemRepository(db)
     product_repo = ProductRepository(db)
     product_variant_repo = ProductVariantRepository(db)
     product_image_repo = ProductImageRepository(db)
-    wishlist = wishlist_repo.get_by_id(wishlist_id) if wishlist_id else None
+    wishlist = await wishlist_repo.get_by_id(wishlist_id) if wishlist_id else None
     if not wishlist:
         return {'items': [], 'notes': ['No wishlist found for user.'], 'time': str(datetime.datetime.now())}
-    items = db.query(wishlist_item_repo.db.query(wishlist_item_repo.db.query()._entity_zero().class_)).filter_by(wishlist_id=wishlist.wishlist_id).all()
+    items_res = await db.execute(select(WishlistItem).filter(WishlistItem.wishlist_id == wishlist.wishlist_id))
+    items = items_res.scalars().all()
     notes = []
     result_items = []
     for item in items:
-        product = product_repo.get_by_id(item.product_id)
+        product = await product_repo.get_by_id(item.product_id)
         if not product:
             notes.append(f"Product {item.product_id} removed from wishlist at {datetime.datetime.now()}.")
-            db.delete(item)
-            db.commit()
+            await db.delete(item)
+            await db.commit()
             continue
         # Get product images
-        images = product_image_repo.get_by_product_id(product.product_id)
+        images = await product_image_repo.get_by_product_id(product.product_id)
         image_url = images[0].image_url if images else None
         # Get category/subcategory names if available
         category_name = getattr(product, 'category_id', None)
@@ -591,20 +599,20 @@ def get_wishlist_items(db, wishlist_id=None):
         variant_image_url = None
         price = product.price
         if item.variant_id:
-            variant = product_variant_repo.get_by_id(item.variant_id)
+            variant = await product_variant_repo.get_by_id(item.variant_id)
             if variant:
                 variant_name = getattr(variant, 'name', None)
                 price = getattr(variant, 'price', price)
                 # Try to get variant image
                 from backend.repositories.repository.product_variant_image_repository import ProductVariantImageRepository
                 variant_image_repo = ProductVariantImageRepository(db)
-                variant_images = variant_image_repo.get_by_variant_id(variant.variant_id)
+                variant_images = await variant_image_repo.get_by_variant_id(variant.variant_id)
                 variant_image_url = variant_images[0].image_url if variant_images else None
         # Stock check
         if item.quantity > product.stock:
             notes.append(f"Product {item.product_id} quantity reduced to {product.stock} at {datetime.datetime.now()}.")
             item.quantity = product.stock
-            db.commit()
+            await db.commit()
         result_items.append({
             'product_id': item.product_id,
             'product_name': product.name,
@@ -620,7 +628,7 @@ def get_wishlist_items(db, wishlist_id=None):
     return {'items': result_items, 'notes': notes}
 
 # Edit cart item quantity
-def edit_cart_item_quantity(cart_item_id, new_quantity, db: DBSession):
+async def edit_cart_item_quantity(cart_item_id: int, new_quantity: int, db: AsyncSession):
     cart_item_repo = CartItemRepository(db)
     product_repo = ProductRepository(db)
     item = cart_item_repo.get_by_id(cart_item_id)
@@ -647,47 +655,47 @@ def edit_cart_item_quantity(cart_item_id, new_quantity, db: DBSession):
     return {'notes': notes}
 
 # Edit wishlist item quantity
-def edit_wishlist_item_quantity(wishlist_item_id, new_quantity, db: DBSession):
+async def edit_wishlist_item_quantity(wishlist_item_id: int, new_quantity: int, db: AsyncSession):
     wishlist_item_repo = WishlistItemRepository(db)
     product_repo = ProductRepository(db)
-    item = wishlist_item_repo.get_by_id(wishlist_item_id)
+    item = await wishlist_item_repo.get_by_id(wishlist_item_id)
     notes = []
     if not item:
         return {'notes': [f'Wishlist item {wishlist_item_id} not found at {datetime.datetime.now()}']}
-    product = product_repo.get_by_id(item.product_id)
+    product = await product_repo.get_by_id(item.product_id)
     if not product:
-        db.delete(item)
-        db.commit()
+        await db.delete(item)
+        await db.commit()
         notes.append(f'Product {item.product_id} removed from wishlist at {datetime.datetime.now()}')
         return {'notes': notes}
     if new_quantity > product.stock:
         item.quantity = product.stock
-        db.commit()
+        await db.commit()
         notes.append(f'Quantity for product {item.product_id} set to {product.stock} at {datetime.datetime.now()}')
     elif new_quantity <= 0:
-        db.delete(item)
-        db.commit()
+        await db.delete(item)
+        await db.commit()
         notes.append(f'Wishlist item {wishlist_item_id} removed at {datetime.datetime.now()}')
     else:
         item.quantity = new_quantity
-        db.commit()
+        await db.commit()
     return {'notes': notes}
 
 # Remove cart item
-def remove_cart_item(cart_item_id, db: DBSession):
+async def remove_cart_item(cart_item_id: int, db: AsyncSession):
     cart_item_repo = CartItemRepository(db)
-    item = cart_item_repo.get_by_id(cart_item_id)
+    item = await cart_item_repo.get_by_id(cart_item_id)
     if item:
-        db.delete(item)
-        db.commit()
+        await db.delete(item)
+        await db.commit()
 
 # Remove wishlist item
-def remove_wishlist_item(wishlist_item_id, db: DBSession):
+async def remove_wishlist_item(wishlist_item_id: int, db: AsyncSession):
     wishlist_item_repo = WishlistItemRepository(db)
-    item = wishlist_item_repo.get_by_id(wishlist_item_id)
+    item = await wishlist_item_repo.get_by_id(wishlist_item_id)
     if item:
-        db.delete(item)
-        db.commit()
+        await db.delete(item)
+        await db.commit()
 
 async def purchase(purchase_data):
     db = purchase_data.get('db')
@@ -717,7 +725,7 @@ async def purchase(purchase_data):
         # cart_items_db = await db.execute(select(CartItem).filter_by(cart_id=cart_id))
         # cart_items_db = cart_items_db.scalars().all()
         # For now, fallback to sync if needed
-        cart_items_db = await db.execute(db.query(type(await cart_item_repo.get_by_id(1))).filter_by(cart_id=cart_id))
+        cart_items_db = await db.execute(select(CartItem).filter(CartItem.cart_id == cart_id))
         cart_items_db = cart_items_db.scalars().all()
         cart_items = []
         total_amount = 0
@@ -773,28 +781,32 @@ async def purchase(purchase_data):
         return True, 'Purchase succeeded.'
     except Exception as e:
         return False, f'Unexpected error: {str(e)}'
-def get_user_orders(db: DBSession):
+async def get_user_orders(db: AsyncSession) -> List[Order]:
     user_id = g.user['user_id']
     order_repo = OrderRepository(db)
-    orders = db.query(Order).filter(Order.user_id == user_id).all()
+    orders_res = await db.execute(select(Order).filter(Order.user_id == user_id))
+    orders = orders_res.scalars().all()
     return orders
 
-def get_order_details(order_id, db: DBSession):
+async def get_order_details(order_id: int, db: AsyncSession) -> Dict[str, Any]:
     order_item_repo = OrderItemRepository(db)
     shipment_repo = ShipmentRepository(db)
     shipment_item_repo = ShipmentItemRepository(db)
-    order_items = db.query(OrderItem).filter(OrderItem.order_id == order_id).all()
-    shipment = db.query(Shipment).filter(Shipment.order_id == order_id).first()
+    order_items_res = await db.execute(select(OrderItem).filter(OrderItem.order_id == order_id))
+    order_items = order_items_res.scalars().all()
+    shipment_res = await db.execute(select(Shipment).filter(Shipment.order_id == order_id))
+    shipment = shipment_res.scalars().first()
     shipment_items = []
     if shipment:
-        shipment_items = db.query(ShipmentItem).filter(ShipmentItem.shipment_id == shipment.shipment_id).all()
+        shipment_items_res = await db.execute(select(ShipmentItem).filter(ShipmentItem.shipment_id == shipment.shipment_id))
+        shipment_items = shipment_items_res.scalars().all()
     return {
         'order_items': order_items,
         'shipment': shipment,
         'shipment_items': shipment_items
     }
     
-def create_refund_request(order_id, order_item_ids, reason, db: DBSession):
+async def create_refund_request(order_id: int, order_item_ids: list[int], reason: str, db: AsyncSession):
     from datetime import datetime
     refund_repo = RefundRequestRepository(db)
     refund_request = RefundRequest(
@@ -805,13 +817,13 @@ def create_refund_request(order_id, order_item_ids, reason, db: DBSession):
         status=RefundRequestStatusEnum.PENDING,
         date_of_request=datetime.now()
     )
-    return refund_repo.save(refund_request)
+    return await refund_repo.save(refund_request)
 
-def get_refund_status(refund_request_id, db: DBSession):
+async def get_refund_status(refund_request_id: int, db: AsyncSession):
     refund_repo = RefundRequestRepository(db)
-    return refund_repo.get_by_id(refund_request_id)
+    return await refund_repo.get_by_id(refund_request_id)
 
-def rate_and_comment_product(product_id, rating, comment, db: DBSession):
+async def rate_and_comment_product(product_id: int, rating: int, comment: str, db: AsyncSession):
     user_id = g.user['user_id']
     if not (1 <= rating <= 5):
         raise ValueError('Rating must be between 1 and 5')
@@ -824,12 +836,12 @@ def rate_and_comment_product(product_id, rating, comment, db: DBSession):
         comment=comment,
         created_at=datetime.datetime.now()
     )
-    return repo.save(product_rating)
+    return await repo.save(product_rating)
 
 def search_products(db, keywords=None, category_id=None, subcategory_id=None, min_price=None, max_price=None):
     from backend.models.model.product import Product
     from backend.repositories.repository.product_image_repository import ProductImageRepository
-    query = db.query(Product)
+    base = select(Product)
     if category_id:
         query = query.filter(Product.category_id == category_id)
     if subcategory_id:

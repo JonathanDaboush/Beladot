@@ -8,7 +8,7 @@
 # purposes, such as storing the address associated with an order or shipment.
 # ------------------------------------------------------------------------------
 
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Integer
 from backend.db.base import Base
 
 class AddressSnapshot(Base):
@@ -30,6 +30,7 @@ class AddressSnapshot(Base):
         shipment_id (String): Shipment ID associated with this address (if any).
     """
     __tablename__ = 'address_snapshot'
+    id = Column(Integer, primary_key=True, index=True)
     reference_type = Column(String(50))
     recipient_name = Column(String(255))
     street_line_1 = Column(String(255))

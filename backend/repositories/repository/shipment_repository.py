@@ -13,7 +13,7 @@ Provides async CRUD operations for shipments.
 
 from backend.persistance.shipment import Shipment
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ShipmentRepository:
     def __init__(self, db: AsyncSession):

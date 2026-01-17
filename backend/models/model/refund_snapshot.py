@@ -1,10 +1,14 @@
-"""
-refund_snapshot.py
+from __future__ import annotations
 
-Expose the canonical RefundSnapshot ORM model from the persistence layer to
-avoid duplicate table declarations.
-"""
+from dataclasses import dataclass
 
-from backend.persistance.refund_snapshot import RefundSnapshot
 
-__all__ = ["RefundSnapshot"]
+@dataclass(slots=True)
+class RefundSnapshot:
+	id: str
+	payment_user_name: str
+	order_number: str
+	amount: float
+	reason: str
+	approved_by_name: str
+	status: str

@@ -1,21 +1,14 @@
-"""
-reimbursement_snapshot.py
+from __future__ import annotations
 
-Model for reimbursement snapshot entity.
-Represents a snapshot of a reimbursement, including employee, amount, and description.
-"""
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional
 
+
+@dataclass(slots=True)
 class ReimbursementSnapshot:
-    def __init__(self, employee_name, amount, description, created_at):
-        """
-        Initialize ReimbursementSnapshot.
-        Args:
-            employee_name (str): Name of the employee.
-            amount (float): Reimbursement amount.
-            description (str): Description of the reimbursement.
-            created_at (datetime): Creation timestamp.
-        """
-        self.employee_name = employee_name
-        self.amount = amount
-        self.description = description
-        self.created_at = created_at
+    employee_name: str
+    incident_number: int
+    amount: float
+    description: str
+    created_at: Optional[datetime]

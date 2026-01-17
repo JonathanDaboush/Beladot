@@ -1,4 +1,14 @@
 
-from backend.persistance.cart_item import CartItem
+from __future__ import annotations
 
-__all__ = ["CartItem"]
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass(slots=True)
+class CartItem:
+	cart_item_id: int
+	cart_id: int
+	product_id: int
+	variant_id: Optional[int]
+	quantity: int

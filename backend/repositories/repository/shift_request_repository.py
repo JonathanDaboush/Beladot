@@ -8,9 +8,9 @@ Repository class for managing ShiftRequest entities in the database.
 Provides async method for retrieving shift requests by ID.
 """
 
-from backend.models.model.shift_request import ShiftRequest
+from backend.persistance.shift_request import ShiftRequest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ShiftRequestRepository:
     def __init__(self, db: AsyncSession):

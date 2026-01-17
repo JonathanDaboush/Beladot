@@ -4,9 +4,9 @@
 
 
 
-from backend.models.model.refund_request import RefundRequest
+from backend.persistance.refund_request import RefundRequest
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class RefundRequestRepository:
     def __init__(self, db: AsyncSession):

@@ -6,9 +6,9 @@
 # Provides async methods for retrieving address snapshots by order number.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.address_snapshot import AddressSnapshot
+from backend.persistance.address_snapshot import AddressSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class AddressSnapshotRepository:
     """

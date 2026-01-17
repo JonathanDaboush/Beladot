@@ -7,9 +7,9 @@
 # Provides async CRUD methods for paystub snapshots.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.paystub_snapshot import PaystubSnapshot
+from backend.persistance.paystub_snapshot import PaystubSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class PaystubSnapshotRepository:
     """

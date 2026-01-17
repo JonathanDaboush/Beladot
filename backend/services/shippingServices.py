@@ -175,6 +175,7 @@ async def get_shipments(shipment_id: int, db: AsyncSession):
     shipment = await shipment_repo.get_by_id(shipment_id)
     return shipment
 
+from sqlalchemy import select
 async def get_shipment_details(shipment_id: int, db: AsyncSession):
     """
     Retrieve shipment details: shipment, shipment items, shipment events, and shipment issues.
@@ -190,9 +191,12 @@ async def get_shipment_details(shipment_id: int, db: AsyncSession):
     shipment_issue_repo = ShipmentIssueRepository(db)
 
     shipment = await shipment_repo.get_by_id(shipment_id)
-    shipment_items = await db.query(ShipmentItem).filter(ShipmentItem.shipment_id == shipment_id).all()
-    shipment_events = await db.query(ShipmentEvent).filter(ShipmentEvent.shipment_id == shipment_id).all()
-    shipment_issues = await db.query(ShipmentIssue).filter(ShipmentIssue.shipment_id == shipment_id).all()
+    items_result = await db.execute(select(ShipmentItem).filter(ShipmentItem.shipment_id == shipment_id))
+    shipment_items = items_result.scalars().all()
+    events_result = await db.execute(select(ShipmentEvent).filter(ShipmentEvent.shipment_id == shipment_id))
+    shipment_events = events_result.scalars().all()
+    issues_result = await db.execute(select(ShipmentIssue).filter(ShipmentIssue.shipment_id == shipment_id))
+    shipment_issues = issues_result.scalars().all()
     return {
         'shipment': shipment,
         'shipment_items': shipment_items,
@@ -216,7 +220,8 @@ async def edit_shipment_items(shipment_id: int, db: AsyncSession, items_data):
     if not id_to_item:
         return True
     # Fetch all current items in one batch
-    current_items = await db.query(ShipmentItem).filter(ShipmentItem.shipment_item_id.in_(list(id_to_item.keys()))).all()
+    current_items_result = await db.execute(select(ShipmentItem).filter(ShipmentItem.shipment_item_id.in_(list(id_to_item.keys()))))
+    current_items = current_items_result.scalars().all()
     # Validate and prepare updates
     updates = []
     for current in current_items:
@@ -253,7 +258,8 @@ async def edit_shipment_events(shipment_id: int, db: AsyncSession, events_data):
     id_to_event = {event.get('event_id'): event for event in events_data if event.get('event_id')}
     if not id_to_event:
         return True
-    current_events = await db.query(ShipmentEvent).filter(ShipmentEvent.event_id.in_(list(id_to_event.keys()))).all()
+    current_events_result = await db.execute(select(ShipmentEvent).filter(ShipmentEvent.event_id.in_(list(id_to_event.keys()))))
+    current_events = current_events_result.scalars().all()
     updates = []
     for current in current_events:
         event = id_to_event.get(current.event_id)
@@ -287,7 +293,8 @@ async def edit_shipment_issues(shipment_id: int, db: AsyncSession, issues_data):
     id_to_issue = {issue.get('issue_id'): issue for issue in issues_data if issue.get('issue_id')}
     if not id_to_issue:
         return True
-    current_issues = await db.query(ShipmentIssue).filter(ShipmentIssue.issue_id.in_(list(id_to_issue.keys()))).all()
+    current_issues_result = await db.execute(select(ShipmentIssue).filter(ShipmentIssue.issue_id.in_(list(id_to_issue.keys()))))
+    current_issues = current_issues_result.scalars().all()
     for current in current_issues:
         issue = id_to_issue.get(current.issue_id)
         if issue:

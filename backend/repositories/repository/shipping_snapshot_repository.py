@@ -10,9 +10,9 @@ Repository class for managing ShippingSnapshot entities in the database.
 Provides async CRUD operations for shipping snapshots.
 """
 
-from backend.models.model.shipping_snapshot import ShippingSnapshot
+from backend.persistance.shipping_snapshot import ShippingSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ShippingSnapshotRepository:
     def __init__(self, db: AsyncSession):

@@ -7,9 +7,9 @@
 # Provides async CRUD methods for PTO snapshots.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.pto_snapshot import PTOSnapshot
+from backend.persistance.pto_snapshot import PTOSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class PTOSnapshotRepository:
     """

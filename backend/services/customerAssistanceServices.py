@@ -29,10 +29,8 @@ from backend.models.model.shipment_issue import ShipmentIssue
 from backend.models.model.shipment import Shipment
 from backend.models.model.shipment_item import ShipmentItem
 import os
-from typing import Union
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
-DBSession = Union[AsyncSession, Session]
+from backend.infrastructure.db_types import DBSession
+from sqlalchemy import select
 
 def send_customer_refund_status_email(customer_email, customer_name, order_id, refund_amount, status, description=None):
     """
@@ -100,26 +98,20 @@ def send_seller_broken_product_notification(seller_email, seller_name, product_n
     return generate_email(seller_email, subject, pagePath)
 
 async def get_all_customer_refund_requests(user_id, db: DBSession, min_date=None, max_date=None):
-    
     """
-    Args:
-        db: SQLAlchemy session (request-scoped, not global; managed by caller).
+    Retrieve all refund requests for a user, optionally filtered by date range.
     """
-    refund_repo = RefundRequestRepository(db)
-    query = db.query(RefundRequest).join(Order, RefundRequest.order_id == Order.order_id).filter(Order.user_id == user_id)
+    stmt = select(RefundRequest).join(Order, RefundRequest.order_id == Order.order_id).filter(Order.user_id == user_id)
     if min_date:
-        query = query.filter(RefundRequest.date_of_request >= min_date)
+        stmt = stmt.filter(RefundRequest.date_of_request >= min_date)
     if max_date:
-        query = query.filter(RefundRequest.date_of_request <= max_date)
-    return await query.all()
+        stmt = stmt.filter(RefundRequest.date_of_request <= max_date)
+    res = await db.execute(stmt)
+    return res.scalars().all()
 
 
 async def get_specific_refund_request(refund_request_id, db: DBSession):
-    
-    """
-    Args:
-        db: SQLAlchemy session (request-scoped, not global; managed by caller).
-    """
+    """Retrieve detailed info for a specific refund request."""
     refund_repo = RefundRequestRepository(db)
     order_repo = OrderRepository(db)
     order_item_repo = OrderItemRepository(db)
@@ -130,8 +122,10 @@ async def get_specific_refund_request(refund_request_id, db: DBSession):
     refund = await refund_repo.get_by_id(refund_request_id)
     if not refund:
         return None
-    order = await order_repo.db.query(order_repo.db.query(OrderItem).filter(OrderItem.order_id == refund.order_id).first().__class__).filter_by(order_id=refund.order_id).first()
-    order_items = await order_item_repo.db.query(OrderItem).filter(OrderItem.order_id == refund.order_id).all()
+    order_res = await order_repo.db.execute(select(Order).filter(Order.order_id == refund.order_id))
+    order = order_res.scalars().first()
+    order_items_res = await order_item_repo.db.execute(select(OrderItem).filter(OrderItem.order_id == refund.order_id))
+    order_items = order_items_res.scalars().all()
     detailed_items = []
     for item in order_items:
         product = await product_repo.get_by_id(item.product_id)
@@ -163,10 +157,6 @@ async def process_customer_complaint(refund_request_id, db: DBSession, descripti
         update_fields: Fields to update on the RefundRequest.
     Returns:
         The updated RefundRequest object, or None if not found.
-    """
-    """
-    Args:
-        db: SQLAlchemy session (request-scoped, not global; managed by caller).
     """
     from backend.models.model.enums import RefundRequestStatus
     from backend.models.model.refund_ledger import RefundLedger
@@ -221,18 +211,16 @@ async def get_shipment_greivence_reports(user_id, db: DBSession, min_date=None, 
     Args:
         db: SQLAlchemy session (request-scoped, not global; managed by caller).
     """
-    issue_repo = ShipmentIssueRepository(db)
-    shipment_repo = ShipmentRepository(db)
-    # Join ShipmentIssue with Shipment, filter by user_id (via order_id in Shipment)
-    query = db.query(ShipmentIssue).join(Shipment, ShipmentIssue.shipment_id == Shipment.shipment_id)
+    # Build query joining ShipmentIssue with Shipment and filter by user
+    stmt = select(ShipmentIssue).join(Shipment, ShipmentIssue.shipment_id == Shipment.shipment_id)
     if hasattr(Shipment, 'order_id'):
-        from backend.models.model.order import Order
-        query = query.join(Order, Shipment.order_id == Order.order_id).filter(Order.user_id == user_id)
+        stmt = stmt.join(Order, Shipment.order_id == Order.order_id).filter(Order.user_id == user_id)
     if min_date:
-        query = query.filter(Shipment.created_at >= min_date)
+        stmt = stmt.filter(Shipment.created_at >= min_date)
     if max_date:
-        query = query.filter(Shipment.created_at <= max_date)
-    return await query.all()
+        stmt = stmt.filter(Shipment.created_at <= max_date)
+    res = await db.execute(stmt)
+    return res.scalars().all()
 
 async def get_greivence_details(issue_id, db: DBSession):
     """
@@ -249,9 +237,8 @@ async def get_greivence_details(issue_id, db: DBSession):
     if not issue:
         return None
     shipment = await shipment_repo.get_by_id(issue.shipment_id)
-    shipment_items = []
-    if shipment:
-        shipment_items = await db.query(ShipmentItem).filter(ShipmentItem.shipment_id == shipment.shipment_id).all()
+    items_res = await db.execute(select(ShipmentItem).filter(ShipmentItem.shipment_id == shipment.shipment_id))
+    shipment_items = items_res.scalars().all()
     # Include appointted_to in the returned issue details if needed
     return {
         'shipment_issue': issue,

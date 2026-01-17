@@ -11,11 +11,9 @@ from backend.models.model.enums import RefundRequestStatus
 from backend.models.model.refund_ledger import RefundLedger
 from backend.repositories.repository.refund_ledger_repository import RefundLedgerRepository
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
-from typing import Union
-DBSession = Union[AsyncSession, Session]
+from typing import Optional
 
-async def handle_refund_event(event: DomainEvent, db: DBSession):
+async def handle_refund_event(event: DomainEvent, db: AsyncSession) -> Optional[object]:
     """
     Handle refund-related domain events (approval/denial).
     Updates refund status and logs the action in the refund ledger.

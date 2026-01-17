@@ -711,7 +711,7 @@ async def ctrl_get_cart_items(request: Request):
         except Exception:
             pass
     data['user_id'] = user_id
-    result = customerServices.get_cart_items(**data)
+    result = await customerServices.get_cart_items(**data)
     return JSONResponse({'result': result})
 
 @app.get('/api/get_wishlist_items')

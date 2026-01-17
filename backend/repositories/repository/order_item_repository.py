@@ -8,7 +8,7 @@
 
 from backend.persistance.order_item import OrderItem
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class OrderItemRepository:
     """

@@ -11,9 +11,9 @@ Repository class for managing UserFinance entities in the database.
 Provides async CRUD operations for user finance records.
 """
 
-from backend.models.model.user_finance import UserFinance
+from backend.persistance.user_finance import UserFinance
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class UserFinanceRepository:
     def __init__(self, db: AsyncSession):

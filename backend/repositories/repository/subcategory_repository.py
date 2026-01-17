@@ -8,9 +8,9 @@ Repository class for managing Subcategory entities in the database.
 Provides async method for retrieving subcategories by ID.
 """
 
-from backend.models.model.subcategory import Subcategory
+from backend.persistance.subcategory import Subcategory
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class SubcategoryRepository:
     def __init__(self, db: AsyncSession):

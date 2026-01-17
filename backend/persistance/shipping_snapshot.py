@@ -5,7 +5,7 @@ SQLAlchemy ORM model for the shipping_snapshot table.
 Represents a snapshot of a shipment, including events, items, and total cost.
 """
 
-from sqlalchemy import Column, BigInteger, String, Float, DateTime, Text
+from sqlalchemy import Column, BigInteger, String, Float, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from .base import Base
 import json
@@ -13,10 +13,10 @@ import json
 class ShippingSnapshot(Base):
     __tablename__ = 'shipping_snapshot'
     snapshot_id = Column(BigInteger, primary_key=True)
-    shipment_id = Column(BigInteger)
-    status = Column(String(32))  # 'complete', 'partial', 'failed'
-    events = Column(Text)  # JSON string of event dicts
-    items = Column(Text)   # JSON string of item dicts
+    shipment_id = Column(BigInteger, ForeignKey('shipment.shipment_id'), nullable=False)
+    status = Column(String(32), nullable=False)  # 'complete', 'partial', 'failed'
+    events = Column(Text, nullable=False, default='[]')  # JSON string of event dicts
+    items = Column(Text, nullable=False, default='[]')   # JSON string of item dicts
     total_cost = Column(Float)
     created_at = Column(DateTime)
 
@@ -52,9 +52,4 @@ class ShippingSnapshot(Base):
         """
         return json.loads(self.items) if self.items else []
 
-    def __init__(self):
-        """
-        Initialize ShippingSnapshot with empty events and items.
-        """
-        self.events = json.dumps([])
-        self.items = json.dumps([])
+    # Avoid custom __init__ that breaks SQLAlchemy construction; use defaults above.

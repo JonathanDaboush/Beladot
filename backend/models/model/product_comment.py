@@ -1,23 +1,18 @@
 """
 product_comment.py
 
-Model for product comment entity.
+Domain model for product comments (pure dataclass, no ORM).
 Represents a user's comment on a product.
 """
 
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Optional
+
+@dataclass(slots=True)
 class ProductComment:
-    def __init__(self, id, product_id, user_id, comment, created_at=None):
-        """
-        Initialize ProductComment.
-        Args:
-            id (int): Unique identifier for the comment.
-            product_id (int): Associated product ID.
-            user_id (int): User ID who made the comment.
-            comment (str): Comment text.
-            created_at (datetime, optional): Creation timestamp.
-        """
-        self.id = id
-        self.product_id = product_id
-        self.user_id = user_id
-        self.comment = comment
-        self.created_at = created_at
+    comment_id: int
+    product_id: int
+    user_id: int
+    comment: str
+    created_at: Optional[datetime] = None

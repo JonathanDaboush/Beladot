@@ -6,9 +6,9 @@
 # Provides async CRUD methods for product comments and product-specific queries.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.product_comment import ProductComment
+from backend.persistance.product_comment import ProductComment
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ProductCommentRepository:
     """

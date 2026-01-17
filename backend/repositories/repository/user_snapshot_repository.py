@@ -8,9 +8,9 @@ Repository class for managing UserSnapshot entities in the database.
 Provides async method for retrieving user snapshots by full name.
 """
 
-from backend.models.model.user_snapshot import UserSnapshot
+from backend.persistance.user_snapshot import UserSnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class UserSnapshotRepository:
     def __init__(self, db: AsyncSession):

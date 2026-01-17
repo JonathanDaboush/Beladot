@@ -26,11 +26,16 @@ import os
 import requests
 import re
 import asyncio
-from backend.config import settings
 
 def _send_email(to_email, subject, html_content):
     api_url = os.environ.get('EMAIL_API_URL')
-    api_key = settings.EMAIL_API_KEY or os.environ.get('EMAIL_API_KEY')
+    # Lazy-load settings to avoid import-time ENV errors
+    try:
+        from backend.config import _load_settings
+        _settings = _load_settings()
+        api_key = _settings.EMAIL_API_KEY or os.environ.get('EMAIL_API_KEY')
+    except Exception:
+        api_key = os.environ.get('EMAIL_API_KEY')
     sender = os.environ.get('EMAIL_SENDER')
 
     if not all([api_url, api_key, sender]):

@@ -10,9 +10,9 @@ Repository class for managing SickDaySnapshot entities in the database.
 Provides async CRUD operations for sick day snapshots by employee name.
 """
 
-from backend.models.model.sickday_snapshot import SickDaySnapshot
+from backend.persistance.sickday_snapshot import SickDaySnapshot
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class SickDaySnapshotRepository:
     def __init__(self, db: AsyncSession):

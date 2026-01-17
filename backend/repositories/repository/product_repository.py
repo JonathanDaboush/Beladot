@@ -6,9 +6,9 @@
 # Provides async CRUD methods and stock management for products.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.product import Product
+from backend.persistance.product import Product
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select
 
 class ProductRepository:
     """

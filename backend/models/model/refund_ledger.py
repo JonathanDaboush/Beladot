@@ -1,23 +1,17 @@
 """
 refund_ledger.py
 
-Model for refund ledger entity.
+Domain model for refund ledger entries (pure dataclass).
 Represents a ledger entry for refund actions and amounts.
 """
 
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
+@dataclass(slots=True)
 class RefundLedger:
-    def __init__(self, refund_id, action, amount, timestamp=None):
-        """
-        Initialize RefundLedger.
-        Args:
-            refund_id (int): Associated refund ID.
-            action (str): Action taken ('approved', 'rejected', etc.).
-            amount (float): Amount of the refund.
-            timestamp (datetime, optional): Timestamp of the ledger entry.
-        """
-        self.refund_id = refund_id
-        self.action = action  # 'approved', 'rejected', etc.
-        self.amount = amount
-        self.timestamp = timestamp or datetime.now()
+    refund_id: int
+    action: str  # e.g., 'approved', 'rejected'
+    amount: float
+    timestamp: Optional[datetime] = None

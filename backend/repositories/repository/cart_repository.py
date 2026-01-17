@@ -6,29 +6,35 @@
 # Provides async CRUD methods for carts.
 # ------------------------------------------------------------------------------
 
-from backend.models.model.cart import Cart
+from typing import Optional
+from backend.persistance.cart import Cart
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 class CartRepository:
     """
     Repository for Cart model.
     Provides async CRUD operations for carts.
     """
-    def __init__(self, db):
+    def __init__(self, db: AsyncSession):
         """Initialize repository with DB session."""
         self.db = db
 
-    async def get_by_id(self, cart_id):
+    async def get_by_id(self, cart_id: int) -> Optional[Cart]:
         """Retrieve a cart by its ID."""
-        return await self.db.query(Cart).filter(Cart.cart_id == cart_id).first()
+        result = await self.db.execute(
+            select(Cart).filter(Cart.cart_id == cart_id)
+        )
+        return result.scalars().first()
 
-    async def save(self, cart):
+    async def save(self, cart: Cart) -> Cart:
         """Save a new cart to the database."""
         self.db.add(cart)
         await self.db.commit()
         await self.db.refresh(cart)
         return cart
 
-    async def update(self, cart_id, **kwargs):
+    async def update(self, cart_id: int, **kwargs) -> Optional[Cart]:
         """Update an existing cart by ID with provided fields."""
         cart = await self.get_by_id(cart_id)
         if not cart:
@@ -39,7 +45,7 @@ class CartRepository:
         await self.db.commit()
         return cart
 
-    async def delete(self, cart_id):
+    async def delete(self, cart_id: int) -> bool:
         """Delete a cart by its ID."""
         cart = await self.get_by_id(cart_id)
         if cart:
