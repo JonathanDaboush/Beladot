@@ -50,13 +50,5 @@
     "jest-fetch-mock": "^3.0.3",
     "react-scripts": "^5.0.1"
   }
-  ,
-  "jest": {
-    "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
-    "testEnvironment": "jsdom",
-    "moduleNameMapper": {
-      "\\.(css|less|scss|sass)$": "identity-obj-proxy",
-      "\\.(gif|ttf|eot|svg|png)$": "<rootDir>/__mocks__/fileMock.js"
-    }
-  }
+  
 }
