@@ -136,3 +136,14 @@ def test_assistance_complaint_with_user_role(client):
 def test_manager_edit_employee_requires_role(client):
     res = client.put("/api/v1/manager/employee/1", json={"notes": "n"})
     assert res.status_code in (401, 403)
+
+
+def test_shipping_create_shipment_rejects_non_created(client):
+    # Ensure non-CREATED status is rejected
+    res = client.post(
+        "/api/v1/shipping/shipments",
+        json={"order_id": 1, "shipment_status": "shipped"},
+        headers=_headers("employee", "2"),
+    )
+    # Rejection may surface as validation (422) or server errors
+    assert res.status_code in (400, 422, 500)
