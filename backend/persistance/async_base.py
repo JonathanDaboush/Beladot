@@ -3,7 +3,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 _engine = None
-_session_factory: async_sessionmaker[AsyncSession] | None = None
+_session_factory = None
 
 def get_async_engine():
     """
@@ -22,12 +22,13 @@ def get_async_engine():
         _engine = create_async_engine(url, echo=True, future=True)
     return _engine
 
-def get_async_sessionmaker() -> async_sessionmaker[AsyncSession]:
+def get_async_sessionmaker():
     """
     Return an async sessionmaker bound to the runtime-created async Engine.
     """
     global _session_factory
     if _session_factory is None:
+        # Defer engine creation; avoid generic type evaluation at import time
         _session_factory = async_sessionmaker(get_async_engine(), expire_on_commit=False)
     return _session_factory
 

@@ -29,7 +29,7 @@ from backend.models.model.shipment_issue import ShipmentIssue
 from backend.models.model.shipment import Shipment
 from backend.models.model.shipment_item import ShipmentItem
 import os
-from backend.infrastructure.db_types import DBSession
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 def send_customer_refund_status_email(customer_email, customer_name, order_id, refund_amount, status, description=None):
@@ -97,7 +97,7 @@ def send_seller_broken_product_notification(seller_email, seller_name, product_n
         html_content = html_content.replace('{{ variant_name }}', '')
     return generate_email(seller_email, subject, pagePath)
 
-async def get_all_customer_refund_requests(user_id, db: DBSession, min_date=None, max_date=None):
+async def get_all_customer_refund_requests(user_id, db: AsyncSession, min_date=None, max_date=None):
     """
     Retrieve all refund requests for a user, optionally filtered by date range.
     """
@@ -110,7 +110,7 @@ async def get_all_customer_refund_requests(user_id, db: DBSession, min_date=None
     return res.scalars().all()
 
 
-async def get_specific_refund_request(refund_request_id, db: DBSession):
+async def get_specific_refund_request(refund_request_id, db: AsyncSession):
     """Retrieve detailed info for a specific refund request."""
     refund_repo = RefundRequestRepository(db)
     order_repo = OrderRepository(db)
@@ -148,7 +148,7 @@ async def get_specific_refund_request(refund_request_id, db: DBSession):
         'order_items': detailed_items
     }
 
-async def process_customer_complaint(refund_request_id, db: DBSession, description=None, **update_fields):
+async def process_customer_complaint(refund_request_id, db: AsyncSession, description=None, **update_fields):
     """
     Update the RefundRequest object with new values.
     Args:
@@ -200,10 +200,10 @@ async def process_customer_complaint(refund_request_id, db: DBSession, descripti
     refund_amount = getattr(refund, 'refund_amount', '')
     status = getattr(refund, 'status', '')
     if customer_email:
-        await send_customer_refund_status_email(customer_email, customer_name, refund.order_id, refund_amount, status, refund.description)
+        send_customer_refund_status_email(customer_email, customer_name, refund.order_id, refund_amount, status, refund.description)
     return refund
 
-async def get_shipment_greivence_reports(user_id, db: DBSession, min_date=None, max_date=None):
+async def get_shipment_greivence_reports(user_id, db: AsyncSession, min_date=None, max_date=None):
     """
     Retrieve all shipment issues for a user, optionally filtered by date.
     """
@@ -222,7 +222,7 @@ async def get_shipment_greivence_reports(user_id, db: DBSession, min_date=None, 
     res = await db.execute(stmt)
     return res.scalars().all()
 
-async def get_greivence_details(issue_id, db: DBSession):
+async def get_greivence_details(issue_id, db: AsyncSession):
     """
     Retrieve details for a specific shipment issue, including the issue, shipment, and shipment items.
     """
@@ -247,7 +247,7 @@ async def get_greivence_details(issue_id, db: DBSession):
         'appointted_to': getattr(issue, 'appointted_to', None)
     }
 
-async def process_shipment_report(issue_id, db: DBSession, **update_fields):
+async def process_shipment_report(issue_id, db: AsyncSession, **update_fields):
     """
     Update the ShipmentIssue object with new values and handle business logic for logistics vs seller fault.
     Args:

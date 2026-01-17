@@ -27,3 +27,17 @@ jobs:
             grep -R --line-number --exclude-dir=backend/tests --exclude-dir=migrations "from sqlalchemy.future import" backend/
             exit 1
           fi
+      - name: Fail on DBSession usage in async files
+        run: |
+          set -e
+          files=$(grep -R -l --exclude-dir=backend/tests --exclude-dir=migrations '\bDBSession\b' backend/ || true)
+          fail=false
+          for f in $files; do
+            if grep -q 'async def' "$f"; then
+              echo "Forbidden DBSession in async file: $f"
+              fail=true
+            fi
+          done
+          if [ "$fail" = true ]; then
+            exit 1
+          fi

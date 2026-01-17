@@ -82,12 +82,14 @@ class TransactionMiddleware(BaseHTTPMiddleware):
             return response
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from backend.persistance.async_base import AsyncSessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import AsyncIterator
 from backend.services import customerAssistanceServices, employeeServices, shippingServices
 from backend.services.managementServices import ManagementServices
 from backend.persistance.async_base import AsyncSessionLocal
 
 # Dependency to get DB session (for ManagementServices)
-async def get_db():
+async def get_db() -> AsyncIterator[AsyncSession]:
     async with AsyncSessionLocal() as session:
         yield session
 from backend.models.model.domain_event import DomainEventType, DomainEvent
@@ -113,6 +115,8 @@ load_dotenv()
 from backend.config import settings
 from backend.infrastructure.structured_logging import logger, log_request_start, log_request_end
 from backend.persistance.async_base import AsyncSessionLocal
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import AsyncIterator
 from backend.models.model.domain_event import DomainEventType, DomainEvent
 from backend.services.financeServices import FinanceService
 from backend.services import customerAssistanceServices, employeeServices, shippingServices, customerServices, financeServices, managerServices, sellerServices
@@ -140,7 +144,7 @@ def require_identity(request: Request):
         return JSONResponse({'detail': 'Unauthorized'}, status_code=401)
 
 # --- Dependency Injection ---
-async def get_db():
+async def get_db() -> AsyncIterator[AsyncSession]:
     async with AsyncSessionLocal() as session:
         yield session
 
