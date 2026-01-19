@@ -43,3 +43,19 @@ export async function removeCartItem(itemId) {
   if (!res.ok) throw new Error('Failed to remove cart item');
   return res.json();
 }
+
+/**
+ * Adds an item to the authenticated user's cart.
+ * Falls back silently if endpoint not available.
+ * @param {{product_id:number, quantity:number, variant_id?:number}} payload
+ * @returns {Promise<object>} Added cart item
+ */
+export async function addToCart(payload) {
+  const res = await fetch('/api/v1/customer/cart/items', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ product_id: payload.product_id, quantity: payload.quantity, variant_id: payload.variant_id })
+  });
+  if (!res.ok) throw new Error('Failed to add to cart');
+  return res.json();
+}

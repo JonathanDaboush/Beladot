@@ -1,6 +1,9 @@
 
 import React, { useEffect, useState, memo } from 'react';
 import { useParams } from 'react-router-dom';
+import { addGuestCartItem } from '../cart/guestCart';
+import { useAuth } from '../context/AuthContext';
+import { addToCart as addToCartApi } from '../api/cart';
 // Removed custom CSS import as Bootstrap classes are used now.
 
 const ProductDetailPage = () => {
@@ -8,6 +11,7 @@ const ProductDetailPage = () => {
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetch(`/api/product/${id}`)
@@ -48,10 +52,22 @@ const ProductDetailPage = () => {
   // Simulate reviews (replace with real data as needed)
   const reviews = product.reviews || [];
 
-  // Add to cart handler (replace with real logic)
-  const handleAddToCart = (prod, variant, qty) => {
-    // Implement add to cart logic here
-    alert(`Added ${qty} of ${prod.name}${variant ? ' (' + variant.name + ')' : ''} to cart.`);
+  // Add to cart handler: guest -> local storage; user -> backend API
+  const handleAddToCart = async (prod, variant, qty) => {
+    try {
+      if (!user) {
+        addGuestCartItem(prod, variant, qty);
+      } else {
+        // Minimal server-side add: use existing API if available
+        if (typeof addToCartApi === 'function') {
+          await addToCartApi({ product_id: prod?.id ?? prod?.product_id, quantity: qty, variant_id: variant?.id ?? variant?.variant_id });
+        }
+      }
+      // Feedback
+      alert(`Added ${qty} of ${prod.name}${variant ? ' (' + variant.name + ')' : ''} to cart.`);
+    } catch (e) {
+      alert('Failed to add to cart.');
+    }
   };
 
   return (
@@ -74,8 +90,13 @@ const ProductDetailPage = () => {
           <div className="mt-4">
             <div className="mb-2 fw-bold">Select Variant:</div>
             <div className="d-flex flex-wrap gap-2">
-              <VariantsList variants={product.variants} />
+              <VariantsList
+                variants={product.variants}
+                selected={selectedVariant}
+                onSelect={setSelectedVariant}
+              />
             </div>
+            {selectedVariant && renderPurchaseControls(selectedVariant.price ?? product.price, () => handleAddToCart(product, selectedVariant, quantity))}
           </div>
         )}
 
@@ -100,12 +121,16 @@ const ProductDetailPage = () => {
   );
 };
 
-const VariantsList = memo(({ variants }) => (
+const VariantsList = memo(({ variants, selected, onSelect }) => (
   <>
     {variants.map(variant => (
-      <div key={variant.id} className="variant-item">
-        {/* ...existing item rendering... */}
-      </div>
+      <button
+        key={variant.id ?? variant.variant_id}
+        className={`btn btn-outline-secondary ${selected && (selected.id ?? selected.variant_id) === (variant.id ?? variant.variant_id) ? 'active' : ''}`}
+        onClick={() => onSelect(variant)}
+      >
+        {variant.name ?? 'Variant'}
+      </button>
     ))}
   </>
 ));

@@ -336,6 +336,7 @@ def create_app():
     from backend.api.routes_shipping import router as shipping_router
     from backend.api.routes_uploads import router as uploads_router
     from backend.api.routes_manager import router as manager_router
+    from backend.api.routes_catalog import catalog_router, public_router
 
     app.include_router(finance_router)
     app.include_router(employee_router)
@@ -345,6 +346,8 @@ def create_app():
     app.include_router(shipping_router)
     app.include_router(uploads_router)
     app.include_router(manager_router)
+    app.include_router(catalog_router)
+    app.include_router(public_router)
 
     # --- Lifespan handled above ---
 

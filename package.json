@@ -1,4 +1,11 @@
 {
+  "name": "divinaPopinaV2",
+  "private": true,
+  "scripts": {
+    "test": "npm --prefix frontend test",
+    "start": "npm --prefix frontend start",
+    "build": "npm --prefix frontend build"
+  },
   "dependencies": {
     "bootstrap": "^5.3.8"
   }
