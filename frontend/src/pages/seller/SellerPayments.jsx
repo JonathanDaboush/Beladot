@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import './SellerPayments.css';
 import Button from '../../components/Button';
+import PageHeader from '../../components/PageHeader';
 
 export default function SellerPayments() {
   const [year, setYear] = useState('');
@@ -14,7 +15,7 @@ export default function SellerPayments() {
 
   return (
     <div className="seller-payments-page">
-      <h2>Seller Payments</h2>
+      <PageHeader title="Payouts" subtitle="View monthly payout summaries and transfers" />
       <div className="payout-controls">
         <input type="number" placeholder="Year" value={year} onChange={e => setYear(e.target.value)} />
         <input type="number" placeholder="Month" value={month} onChange={e => setMonth(e.target.value)} />

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Button from '../components/Button';
+import PageHeader from '../components/PageHeader';
 // ...existing code...
 
 const RegisterPage = () => {
@@ -23,7 +24,7 @@ const RegisterPage = () => {
   return (
     <div className="container py-4 d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
       <div className="w-100" style={{ maxWidth: '400px' }}>
-        <h2 className="mb-4 text-center">Create Account</h2>
+        <PageHeader title="Create Account" subtitle="Register to manage orders and profile" />
         <form onSubmit={handleRegister} className="card p-4 shadow-sm">
           <div className="mb-3">
             <input

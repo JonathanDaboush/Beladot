@@ -24,10 +24,7 @@ export default function SellerProductList() {
 
   return (
     <div className="seller-product-list">
-      <div className="header-row">
-        <h2>My Products</h2>
-        <Button kind="primary" onClick={() => navigate('/seller/products/add')}>Create Product</Button>
-      </div>
+      <PageHeader title="Products" subtitle="Manage your listings and availability" action={<Button kind="primary" onClick={() => navigate('/seller/products/add')}>Create Product</Button>} />
       <div className="filters-panel">
         {/* TODO: Render filter controls here */}
       </div>

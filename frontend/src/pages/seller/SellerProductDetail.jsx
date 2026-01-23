@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import './SellerProductDetail.css';
 import Button from '../../components/Button';
+import PageHeader from '../../components/PageHeader';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 export default function SellerProductDetail() {
   const { productId } = useParams();
@@ -17,13 +19,16 @@ export default function SellerProductDetail() {
   }, [productId]);
 
   const handleEdit = () => navigate(`/seller/products/${productId}/edit`);
+  const [confirmProductOpen, setConfirmProductOpen] = useState(false);
+  const [confirmVariantOpen, setConfirmVariantOpen] = useState(false);
+  const [variantToArchive, setVariantToArchive] = useState(null);
+
   const handleSoftDelete = () => {
-    if (!window.confirm('Archive this product? It will be hidden from customers.')) return;
-    // TODO: Call archive product API
+    setConfirmProductOpen(true);
   };
   const handleVariantDelete = (variantId) => {
-    if (!window.confirm('Archive this variant? It will be hidden from customers.')) return;
-    // TODO: Call archive variant API
+    setVariantToArchive(variantId);
+    setConfirmVariantOpen(true);
   };
   const handleCommentResponse = (commentId, response) => {
     // TODO: Call respond to comment API
@@ -35,13 +40,12 @@ export default function SellerProductDetail() {
 
   return (
     <div className="seller-product-detail">
-      <h2>{product.name}</h2>
+      <PageHeader title={product.name} subtitle="Manage product details, variants and comments" action={<Button kind="secondary" onClick={handleEdit}>Edit Product</Button>} />
       <img src={product.image_url} alt={product.name} />
       <p>{product.description}</p>
       <p>Price: ${product.price}</p>
       <p>Category: {product.category_name}</p>
       <p>Total Stock: {totalStock}</p>
-      <Button kind="secondary" onClick={handleEdit}>Edit Product</Button>
       <Button kind="destructive" onClick={handleSoftDelete}>Archive Product</Button>
       <h3>Variants</h3>
       <ul>
@@ -53,6 +57,24 @@ export default function SellerProductDetail() {
         ))}
       </ul>
       <h3>User Comments</h3>
+            <ConfirmDialog
+              open={confirmProductOpen}
+              title="Archive Product"
+              message="Archiving hides the product from customers without deleting it. Proceed?"
+              confirmLabel="Archive"
+              cancelLabel="Cancel"
+              onConfirm={() => { setConfirmProductOpen(false); /* TODO: Call archive product API */ }}
+              onCancel={() => setConfirmProductOpen(false)}
+            />
+            <ConfirmDialog
+              open={confirmVariantOpen}
+              title="Archive Variant"
+              message="Archiving hides the variant from customers without deleting it. Proceed?"
+              confirmLabel="Archive"
+              cancelLabel="Cancel"
+              onConfirm={() => { setConfirmVariantOpen(false); /* TODO: Call archive variant API using variantToArchive */ setVariantToArchive(null); }}
+              onCancel={() => { setConfirmVariantOpen(false); setVariantToArchive(null); }}
+            />
       <ul>
         {comments.map(comment => (
           <li key={comment.comment_id}>
