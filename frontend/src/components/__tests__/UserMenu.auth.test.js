@@ -8,12 +8,12 @@ jest.mock('../../context/AuthContext', () => ({
 
 import UserMenu from '../UserMenu';
 
-test('shows logout when authenticated', () => {
+test('shows sign out when authenticated', () => {
   const onLogout = jest.fn();
   render(<UserMenu onLogout={onLogout} />);
   fireEvent.click(screen.getByRole('img', { name: /user/i }));
-  const logoutItem = screen.getByText(/Logout/i);
-  expect(logoutItem).toBeInTheDocument();
-  fireEvent.click(logoutItem);
+  const signOutItem = screen.getByText(/Sign out/i);
+  expect(signOutItem).toBeInTheDocument();
+  fireEvent.click(signOutItem);
   expect(onLogout).toHaveBeenCalled();
 });

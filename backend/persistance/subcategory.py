@@ -15,4 +15,8 @@ class Subcategory(Base):
     category_id = Column(BigInteger, ForeignKey('category.category_id'))
     name = Column(String(100), nullable=False)
     image_url = Column(String(255), nullable=True)
-    # Relationships (to be completed in product.py)
+    category = relationship(
+        "Category",
+        back_populates="subcategories",
+        lazy="selectin"
+    )

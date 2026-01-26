@@ -52,7 +52,7 @@ def upgrade():
         sa.Column('description', sa.Text),
         sa.Column('price', sa.Numeric(10, 2)),
         sa.Column('currency', sa.String(10)),
-        sa.Column('is_active', sa.Boolean, server_default=sa.text('1')),
+        sa.Column('is_active', sa.Boolean, server_default=sa.text('TRUE')),
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
     )
@@ -73,7 +73,7 @@ def upgrade():
         sa.Column('variant_name', sa.String(100)),
         sa.Column('price', sa.Numeric(10, 2)),
         sa.Column('quantity', sa.Integer),
-        sa.Column('is_active', sa.Boolean, server_default=sa.text('1')),
+        sa.Column('is_active', sa.Boolean, server_default=sa.text('TRUE')),
     )
 
     # 6) Cart (FK -> user)

@@ -17,39 +17,21 @@ import { useAuth } from '../context/AuthContext';
  */
 const UserMenu = ({ onLogout }) => {
   const [open, setOpen] = useState(false);
-  const { user, isEmployee, isManager, isSeller, department, job } = useAuth();
+  const { user, isEmployee, isManager, isSeller } = useAuth();
 
   /**
    * Returns menu options based on user authentication and role.
    */
-  const getMenuOptions = () => {
-    if (!user) {
-      return [
-        { label: 'Login', action: () => window.location.href = '/login' },
-        { label: 'Create Account', action: () => window.location.href = '/register' },
-      ];
-    }
-    const options = [
-      { label: 'Profile / Account', action: () => window.location.href = '/profile' },
-      { label: 'Order History / Purchases', action: () => window.location.href = '/orders' },
-    ];
-    if (isEmployee) {
-      options.push({ label: 'Employee Services', action: () => window.location.href = '/employee' });
-      if (department) {
-        options.push({ label: `Department: ${department}`, action: null, disabled: true });
-      }
-      if (job) {
-        options.push({ label: `Job: ${job}`, action: null, disabled: true });
-      }
-    }
-    if (isSeller) {
-      options.push({ label: 'Seller Portal', action: () => window.location.href = '/seller' });
-    }
-    options.push({ label: 'Logout', action: onLogout });
-    return options;
+  const portals = () => {
+    if (!user) return [];
+    const p = ['Customer'];
+    if (isSeller) p.push('Seller');
+    if (isEmployee) p.push('Employee');
+    if (isManager) p.push('Manager');
+    return p;
   };
 
-  const menuOptions = getMenuOptions();
+  const portalList = portals();
 
   return (
     <div className="user-menu-wrapper">
@@ -59,46 +41,53 @@ const UserMenu = ({ onLogout }) => {
       </div>
       {open && (
         <div className="user-dropdown">
-          {/* Profile/Orders always visible for logged in users */}
+              {/* Auth actions: show only relevant options, no disabled items */}
+              {!user && (
+                <>
+                  <div className="user-dropdown-item" onClick={() => window.location.href = '/login'}>Sign in</div>
+                  <div className="user-dropdown-item" onClick={() => window.location.href = '/register'}>Create Account</div>
+                  <div className="user-dropdown-item" onClick={() => window.location.href = '/forgot-password'}>Forgot Password</div>
+                </>
+              )}
+              {user && (
+                <div className="user-dropdown-item" onClick={() => { onLogout && onLogout(); }}>Sign out</div>
+              )}
+
+              {/* Orders visible for logged-in users */}
+              {user && (
+                <div className="user-dropdown-item" onClick={() => window.location.href = '/orders'}>Order History / Purchases</div>
+              )}
+          {/* Portal switcher: only when more than one portal is available */}
+          {user && portalList.length > 1 && (
+            <>
+              <div className="dropdown-section-label">Switch Portal</div>
+              {portalList.includes('Customer') && (
+                <div className="user-dropdown-item" onClick={() => window.location.href = '/'}>Customer</div>
+              )}
+              {portalList.includes('Seller') && (
+                <div className="user-dropdown-item" onClick={() => window.location.href = '/seller'}>Seller</div>
+              )}
+              {portalList.includes('Employee') && (
+                <div className="user-dropdown-item" onClick={() => window.location.href = '/employee'}>Employee</div>
+              )}
+              {portalList.includes('Manager') && (
+                <div className="user-dropdown-item" onClick={() => window.location.href = '/manager'}>Manager</div>
+              )}
+            </>
+          )}
+          {/* Profile entry */}
           {user && (
-            <>
-              <div className="user-dropdown-item" onClick={() => window.location.href = '/profile'}>Profile / Account</div>
-              <div className="user-dropdown-item" onClick={() => window.location.href = '/orders'}>Order History / Purchases</div>
-            </>
+            <div className="user-dropdown-item" onClick={() => { window.location.href = '/profile'; }}>Profile / Account</div>
           )}
-          {/* Employee Services dropdown, for employees and managers */}
-          {(isEmployee || isManager) && (
-            <>
-              <div className="dropdown-section-label">Employee Services</div>
-              <div className="dropdown-category">
-                <div className="dropdown-category-title">Schedule</div>
-                <div className="user-dropdown-item" onClick={() => window.location.href = '/employee/schedule'}>Get Schedule</div>
-                <div className="user-dropdown-item" onClick={() => window.location.href = '/employee/personal-schedule'}>PTO & Sick Days</div>
-                <div className="user-dropdown-item" onClick={() => window.location.href = '/employee/book-shift'}>Book Shift</div>
-              </div>
-              <div className="dropdown-category">
-                <div className="dropdown-category-title">Finance</div>
-                <div className="user-dropdown-item" onClick={() => window.location.href = '/employee/reimbursement/create'}>Create Reimbursement</div>
-                <div className="user-dropdown-item" onClick={() => window.location.href = '/employee/reimbursements'}>Reimbursement List</div>
-                <div className="user-dropdown-item" onClick={() => window.location.href = '/employee/payment-snapshots'}>Payment Snapshots</div>
-              </div>
-              {department && <div className="user-dropdown-item disabled">Department: {department}</div>}
-              {job && <div className="user-dropdown-item disabled">Job: {job}</div>}
-            </>
-          )}
-          {/* Seller Portal entry, only if isSeller */}
-          {isSeller && !isEmployee && (
-            <div className="user-dropdown-item" onClick={() => window.location.href = '/seller'}>Seller Portal</div>
-          )}
-          {/* Auth links for not logged in users */}
+          {/* Become a Seller: always last option */}
+          {/* Not signed in: send to login with next to seller upgrade */}
           {!user && (
-            <>
-              <div className="user-dropdown-item" onClick={() => window.location.href = '/login'}>Login</div>
-              <div className="user-dropdown-item" onClick={() => window.location.href = '/register'}>Create Account</div>
-            </>
+            <div className="user-dropdown-item" onClick={() => { window.location.href = '/login?next=/seller/upgrade'; }}>Become a Seller</div>
           )}
-          {/* Logout always last if logged in */}
-          {user && <div className="user-dropdown-item" onClick={onLogout}>Logout</div>}
+          {/* Signed in but not a seller: go to seller upgrade */}
+          {user && !isSeller && (
+            <div className="user-dropdown-item" onClick={() => { window.location.href = '/seller/upgrade'; }}>Become a Seller</div>
+          )}
         </div>
       )}
     </div>

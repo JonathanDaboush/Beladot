@@ -8,12 +8,14 @@
  * Usage:
  *   const portalType = usePortalType();
  */
-import { useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export function usePortalType() {
-  const location = useLocation();
-  // Determine portal type by route prefix
-  if (location.pathname.startsWith('/employee')) return 'employee';
-  if (location.pathname.startsWith('/seller')) return 'seller';
+  // Drive portal state from session permissions only
+  const { activeRole } = useAuth();
+  // Map roles to portal types; default to 'user' (Customer)
+  if (activeRole === 'employee') return 'employee';
+  if (activeRole === 'seller') return 'seller';
+  if (activeRole === 'manager') return 'manager';
   return 'user';
 }

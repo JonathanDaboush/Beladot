@@ -24,7 +24,7 @@ class ProductComment(Base):
     __tablename__ = 'product_comment'
     comment_id = Column(BigInteger, primary_key=True, autoincrement=True)
     product_id = Column(BigInteger, ForeignKey('product.product_id'), nullable=False)
-    user_id = Column(BigInteger, ForeignKey('user.user_id'), nullable=False)
+    user_id = Column(BigInteger, ForeignKey('users.user_id'), nullable=False)
     comment = Column(String(1000), nullable=False)
     created_at = Column(DateTime, nullable=True)
     is_deleted = Column(Boolean, nullable=False, default=False)

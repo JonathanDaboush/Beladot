@@ -14,8 +14,8 @@ sys.path.insert(
 # ---------------------------------------------------------------
 # Set test database URL BEFORE importing backend
 # ---------------------------------------------------------------
-# Force test database URL to SQLite (async) for all tests
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test.db"
+# Force test database URL to Postgres for all tests
+os.environ["DATABASE_URL"] = "postgresql+asyncpg://postgres:postgres@localhost:5432/divina_dev"
 
 # Ensure environment is set for settings loading
 os.environ["ENV"] = "test"
@@ -65,7 +65,7 @@ def event_loop():
 # Reset database schema before tests (drop -> create)
 # ---------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
-async def init_db():
+def init_db(event_loop):
     # Import persistence models so metadata has all tables
     import backend.persistance.department
     import backend.persistance.user
@@ -87,12 +87,14 @@ async def init_db():
     import backend.persistance.wishlist
     import backend.persistance.wishlist_item
 
-    async with engine.begin() as conn:
-        # Clear existing schema and data
-        await conn.run_sync(Base.metadata.drop_all)
-        # Recreate schema to ensure all tables exist before tests
-        await conn.run_sync(Base.metadata.create_all)
+    async def _setup():
+        async with engine.begin() as conn:
+            # Clear existing schema and data
+            await conn.run_sync(Base.metadata.drop_all)
+            # Recreate schema to ensure all tables exist before tests
+            await conn.run_sync(Base.metadata.create_all)
 
+    event_loop.run_until_complete(_setup())
     # Tests run after this yield; final cleanup handled below
     yield
 
@@ -100,7 +102,9 @@ async def init_db():
 # Database cleanup after all tests
 # ---------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
-async def cleanup_db():
+def cleanup_db(event_loop):
     yield
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    async def _cleanup():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+    event_loop.run_until_complete(_cleanup())

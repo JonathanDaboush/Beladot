@@ -7,10 +7,12 @@ jest.mock('../../context/AuthContext', () => ({
 
 import UserMenu from '../UserMenu';
 
-test('shows login options when not authenticated', () => {
+test('shows auth actions and profile message when not authenticated', () => {
   const onLogout = jest.fn();
   render(<UserMenu onLogout={onLogout} />);
   fireEvent.click(screen.getByRole('img', { name: /user/i }));
-  expect(screen.getByText(/Login/i)).toBeInTheDocument();
+  expect(screen.getByText(/Sign in/i)).toBeInTheDocument();
   expect(screen.getByText(/Create Account/i)).toBeInTheDocument();
+  expect(screen.getByText(/Forgot Password/i)).toBeInTheDocument();
+  // Profile navigates to page; dropdown no longer shows inline message
 });

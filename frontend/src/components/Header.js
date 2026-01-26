@@ -5,13 +5,14 @@ import UserMenu from './UserMenu';
 import NavBar from './NavBar';
 import RoleIndicator from './RoleIndicator';
 import RoleSwitcher from './RoleSwitcher';
+
 import { ROLE_META } from './roles';
 
 const Header = () => {
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
   const [dropdown, setDropdown] = useState(null);
-  const { activeRole } = useAuth();
+  const { activeRole, availableRoles } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
 
   useEffect(() => {
@@ -43,22 +44,32 @@ const Header = () => {
 
   const accent = ROLE_META[activeRole]?.pillColor;
   return (
-    <header className="header" role="banner" style={{ '--role-accent': accent }}>
-      <div className="header-left">
-        <span className="logo">Bela</span>
-        <span className="app-name">Commerce</span>
-      </div>
-      <div className="header-center">
-        {/* Unified nav; items scoped by activeRole */}
-        <NavBar />
-      </div>
-      <div className="header-right">
-        {/* Role indicator is always visible; opens switcher */}
-        <RoleIndicator onClick={() => setSwitcherOpen(true)} />
-        <RoleSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
-        <UserMenu onLogout={handleLogout} />
-      </div>
-    </header>
+    <>
+      <header className="header" role="banner" style={{ '--role-accent': accent }}>
+        <div className="header-left">
+          <span className="logo">Bela</span>
+          <span className="app-name">Commerce</span>
+        </div>
+        <div className="header-center">
+          {/* Unified nav; items scoped by activeRole */}
+          <NavBar />
+        </div>
+        <div className="header-right">
+          {/* Cart icon shown only in Customer (user) portal */}
+          {activeRole === 'user' && (
+            <a href="/cart" className="cart-icon" aria-label="Cart" title="Cart" style={{ textDecoration: 'none', fontSize: '1.25rem' }}>🛒</a>
+          )}
+          {/* Portal switcher visible only when more than one portal is available */}
+          {availableRoles && availableRoles.length > 1 && (
+            <>
+              <RoleIndicator onClick={() => setSwitcherOpen(true)} />
+              <RoleSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
+            </>
+          )}
+          <UserMenu onLogout={handleLogout} />
+        </div>
+      </header>
+    </>
   );
 };
 

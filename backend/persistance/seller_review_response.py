@@ -27,7 +27,7 @@ class SellerReviewResponse(Base):
     __tablename__ = 'seller_review_response'
     response_id = Column(BigInteger, primary_key=True)
     review_id = Column(BigInteger, ForeignKey('product_review.review_id'))
-    seller_id = Column(BigInteger, ForeignKey('user.user_id'))
+    seller_id = Column(BigInteger, ForeignKey('users.user_id'))
     response_text = Column(Text)
     created_at = Column(DateTime)
     # Relationships (to be completed in product_review.py)

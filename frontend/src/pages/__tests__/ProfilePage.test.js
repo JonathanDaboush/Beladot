@@ -24,6 +24,17 @@ afterEach(() => {
 });
 
 describe('ProfilePage', () => {
+  it('shows Not signed in when unauthorized', async () => {
+    global.fetch.mockRestore && global.fetch.mockRestore();
+    jest.spyOn(global, 'fetch').mockImplementation((url, options) => {
+      if (url === '/api/profile' && !options) {
+        return Promise.resolve({ ok: false, status: 401 });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+    const { findByText } = renderWithRouter(<ProfilePage />);
+    expect(await findByText('Not signed in')).toBeInTheDocument();
+  });
   it('shows success toast after saving user info', async () => {
     const { findByText, getAllByText, getByDisplayValue, getByText } = renderWithRouter(<ProfilePage />);
 

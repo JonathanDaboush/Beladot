@@ -11,7 +11,7 @@ export default function RoleSwitcher({ open, onClose }) {
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
-  const allRoles = useMemo(() => Object.keys(ROLE_META), []);
+  const allowedRoles = useMemo(() => (availableRoles || []).filter((r) => Object.keys(ROLE_META).includes(r)), [availableRoles]);
 
   const handleSwitch = (role) => {
     if (!availableRoles.includes(role) || role === activeRole) return;
@@ -28,7 +28,8 @@ export default function RoleSwitcher({ open, onClose }) {
     }, 150);
   };
 
-  if (!open) return null;
+  // Never render switcher unless user has more than one portal
+  if (!open || !availableRoles || availableRoles.length <= 1) return null;
   return (
     <div className="role-switcher-panel" role="dialog" aria-label="Switch Role">
       <div className="role-switcher-header">
@@ -44,20 +45,17 @@ export default function RoleSwitcher({ open, onClose }) {
         <div className="available-roles">
           <div className="label">Available Roles</div>
           <ul>
-            {allRoles.map((role) => {
-              const allowed = availableRoles.includes(role);
+            {allowedRoles.map((role) => {
               const isCurrent = role === activeRole;
               return (
-                <li key={role} className={`role-option${allowed ? '' : ' disabled'}${isCurrent ? ' current' : ''}`}>
+                <li key={role} className={`role-option${isCurrent ? ' current' : ''}`}>
                   <button
                     className="role-btn"
-                    disabled={!allowed || switching || isCurrent}
+                    disabled={switching || isCurrent}
                     onClick={() => handleSwitch(role)}
-                    aria-disabled={!allowed}
                   >
                     <div className="name">{ROLE_META[role]?.name || role}</div>
                     <div className="desc">{ROLE_META[role]?.description}</div>
-                    {!allowed && <div className="muted" style={{ fontSize: '0.85rem' }}>Not available for your account</div>}
                   </button>
                 </li>
               );

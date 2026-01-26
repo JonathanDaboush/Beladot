@@ -1,0 +1,2 @@
+.filters-bar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;border-top:1px solid var(--dp-border);border-bottom:1px solid var(--dp-border);padding:.5rem 1rem;background:#fff;margin-bottom:.75rem}
+.filters-bar .price{max-width:90px}

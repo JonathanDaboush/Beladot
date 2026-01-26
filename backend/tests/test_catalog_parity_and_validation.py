@@ -19,8 +19,8 @@ def client():
 @pytest.fixture(scope="function")
 def setup_test_database():
     # Ensure we use test settings and Alembic to create full schema
-    os.environ["ENV"] = "test"
-    os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+        os.environ["ENV"] = "test"
+        os.environ["DATABASE_URL"] = "postgresql+asyncpg://postgres:postgres@localhost:5432/divina_dev"
     # Start from a clean database file to avoid stale schemas
     try:
         if os.path.exists("test.db"):

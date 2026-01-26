@@ -31,7 +31,7 @@ class Order(Base):
     """
     __tablename__ = 'order'
     order_id = Column(BigInteger, primary_key=True)
-    user_id = Column(BigInteger, ForeignKey('user.user_id'))
+    user_id = Column(BigInteger, ForeignKey('users.user_id'))
     cart_id = Column(BigInteger, ForeignKey('cart.cart_id'), nullable=True)
     order_status = Column(Enum(OrderStatusEnum))
     total_amount = Column(Numeric(10,2))

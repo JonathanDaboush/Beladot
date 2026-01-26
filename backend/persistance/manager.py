@@ -28,7 +28,7 @@ class Manager(Base):
     """
     __tablename__ = 'manager'
     manager_id = Column(BigInteger, primary_key=True)
-    user_id = Column(BigInteger, ForeignKey('user.user_id'))
+    user_id = Column(BigInteger, ForeignKey('users.user_id'))
     department_id = Column(BigInteger, ForeignKey('department.department_id'))
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime)

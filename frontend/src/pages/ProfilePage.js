@@ -6,17 +6,37 @@ import './ProfilePage.css';
 
 const ProfilePage = () => {
   const [user, setUser] = useState(null);
+  const [status, setStatus] = useState('loading'); // loading | ready | unauth
   const [editMode, setEditMode] = useState({ user: false, shipping: false, payment: false });
   const [form, setForm] = useState({});
   const [toast, setToast] = useState({ open: false, kind: 'success', message: '' });
 
   useEffect(() => {
+    let mounted = true;
     fetch('/api/profile')
-      .then(res => res.json())
-      .then(data => {
+      .then(async res => {
+        if (!mounted) return;
+        if (res.status === 401 || res.status === 403) {
+          setStatus('unauth');
+          return null;
+        }
+        if (!res.ok) {
+          setStatus('unauth');
+          return null;
+        }
+        const data = await res.json();
+        if (!data || !data.user) {
+          setStatus('unauth');
+          return null;
+        }
         setUser(data.user);
         setForm(data.user);
+        setStatus('ready');
+      })
+      .catch(() => {
+        if (mounted) setStatus('unauth');
       });
+    return () => { mounted = false; };
   }, []);
 
   const handleEdit = section => setEditMode({ ...editMode, [section]: true });
@@ -37,7 +57,17 @@ const ProfilePage = () => {
     }).catch(() => setToast({ open: true, kind: 'error', message: 'Could not save changes' }));
   };
 
-  if (!user) return <div className="profile-loading">Loading...</div>;
+  if (status === 'loading') return <div className="profile-loading">Loading...</div>;
+
+  if (status === 'unauth') return (
+    <div className="profile-page">
+      <PageHeader title="Profile" subtitle="Manage your account and preferences" />
+      <section className="profile-section">
+        <h3>Not signed in</h3>
+        <p>Please sign in to view your profile.</p>
+      </section>
+    </div>
+  );
 
   return (
     <div className="profile-page">

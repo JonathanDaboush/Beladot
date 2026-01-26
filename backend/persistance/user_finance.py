@@ -13,7 +13,7 @@ from .enums import AccountTypeEnum
 class UserFinance(Base):
     __tablename__ = 'user_finance'
     uf_id = Column(BigInteger, primary_key=True)
-    user_id = Column(BigInteger, ForeignKey('user.user_id'))
+    user_id = Column(BigInteger, ForeignKey('users.user_id'))
     bank = Column(String(100))
     pin = Column(String(4))
     cvv = Column(String(3))

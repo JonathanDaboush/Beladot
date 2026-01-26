@@ -31,7 +31,7 @@ class Payment(Base):
     __tablename__ = 'payment'
     payment_id = Column(BigInteger, primary_key=True)
     order_id = Column(BigInteger, ForeignKey('order.order_id'))
-    user_id = Column(BigInteger, ForeignKey('user.user_id'))
+    user_id = Column(BigInteger, ForeignKey('users.user_id'))
     amount = Column(Numeric(10,2))
     currency = Column(String(10))
     status = Column(Enum(PaymentStatusEnum))

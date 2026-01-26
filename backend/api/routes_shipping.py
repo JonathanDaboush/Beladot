@@ -10,7 +10,8 @@ router = APIRouter(prefix="/api/v1/shipping", tags=["shipping"])
 def require_role(role: str):
     async def dependency(request: Request):
         identity = getattr(request.state, "identity", {})
-        if identity.get("role") not in ("employee", "seller"):
+        # Shipping endpoints restricted to employees only
+        if identity.get("role") != "employee":
             raise HTTPException(status_code=403, detail="Forbidden")
         return identity
     return dependency

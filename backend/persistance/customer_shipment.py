@@ -30,7 +30,7 @@ class CustomerShipment(Base):
     """
     __tablename__ = 'customer_shipment'
     cs_id = Column(BigInteger, primary_key=True)
-    customer_id = Column(BigInteger, ForeignKey('user.user_id'))
+    customer_id = Column(BigInteger, ForeignKey('users.user_id'))
     address = Column(String(255))
     postal_code = Column(String(20))
     street_line_1 = Column(String(255))

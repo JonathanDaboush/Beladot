@@ -33,7 +33,7 @@ class Product(Base):
     __tablename__ = 'product'
     # Use Integer for SQLite autoincrement primary key behavior
     product_id = Column(Integer, primary_key=True, autoincrement=True)
-    seller_id = Column(BigInteger, ForeignKey('user.user_id'))
+    seller_id = Column(BigInteger, ForeignKey('users.user_id'))
     category_id = Column(BigInteger, ForeignKey('category.category_id'))
     subcategory_id = Column(BigInteger, ForeignKey('subcategory.subcategory_id'))
     title = Column(String(255), nullable=False)

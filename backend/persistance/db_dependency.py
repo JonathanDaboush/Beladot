@@ -1,8 +1,6 @@
 from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import AsyncSession
-from .async_base import get_async_sessionmaker
+from .async_base import AsyncSessionLocal
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    session_factory = get_async_sessionmaker()
-    async with session_factory() as session:
+async def get_db() -> AsyncGenerator:
+    async with AsyncSessionLocal() as session:
         yield session

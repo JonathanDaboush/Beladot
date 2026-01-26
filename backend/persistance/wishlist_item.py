@@ -16,4 +16,5 @@ class WishlistItem(Base):
     product_id = Column(BigInteger, ForeignKey('product.product_id'))
     variant_id = Column(BigInteger, ForeignKey('product_variant.variant_id'), nullable=True)
     quantity = Column(Integer)
-    # Relationships (to be completed in wishlist.py, product.py, product_variant.py)
+    user_id = Column(BigInteger, ForeignKey('users.user_id'))  # Updated ForeignKey reference
+    user = relationship('User', back_populates='wishlist_items')  # Added relationship reference

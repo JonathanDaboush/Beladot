@@ -20,6 +20,18 @@ from backend.schemas.schemas_catalog import (
 catalog_router = APIRouter(prefix="/api/v1/catalog", tags=["catalog"])
 public_router = APIRouter(tags=["catalog"])
 
+
+def _static_url(path: str | None) -> str | None:
+    if not path:
+        return None
+    # Normalize Windows paths to forward slashes, ensure single /static prefix, then URL-encode
+    normalized = str(path).replace("\\", "/")
+    if normalized.startswith("/static/"):
+        raw = normalized
+    else:
+        raw = f"/static/{normalized.lstrip('/')}"
+    return quote(raw, safe="/")
+
 def _serialize_product_basic(p: Product, image_url: Optional[str] = None):
     return {
         "id": p.product_id,
@@ -57,16 +69,28 @@ async def list_products(db: AsyncSession = Depends(get_db)):
     for row in rows:
         pid = row[0]
         images = await image_repo.get_by_product_id(pid)
-        image_url = images[0] if images else None
+        # Primary product image (if any), normalized
+        image_url = _static_url(images[0]) if images else None
         # Resolve category/subcategory names
         cat_name = None
         subcat_name = None
+        cat_img = None
+        subcat_img = None
         if row[5] is not None:
-            c_row = (await db.execute(select(Category.name).filter(Category.category_id == row[5]))).first()
-            cat_name = c_row[0] if c_row else None
+            c_row = (await db.execute(select(Category.name, Category.image_url).filter(Category.category_id == row[5]))).first()
+            if c_row:
+                cat_name = c_row[0]
+                cat_img = c_row[1]
         if row[6] is not None:
-            s_row = (await db.execute(select(Subcategory.name).filter(Subcategory.subcategory_id == row[6]))).first()
-            subcat_name = s_row[0] if s_row else None
+            s_row = (await db.execute(select(Subcategory.name, Subcategory.image_url).filter(Subcategory.subcategory_id == row[6]))).first()
+            if s_row:
+                subcat_name = s_row[0]
+                subcat_img = s_row[1]
+        # Fallback to subcategory image, then category image
+        if not image_url and subcat_img:
+            image_url = _static_url(subcat_img)
+        if not image_url and cat_img:
+            image_url = _static_url(cat_img)
         item = {
             "id": pid,
             "name": row[1] or "Product",
@@ -102,15 +126,25 @@ async def _get_product_detail(product_id: int, db: AsyncSession):
         raise HTTPException(status_code=404, detail="Product not found")
     pid = row[0]
     images = await image_repo.get_by_product_id(pid)
-    image_url = images[0] if images else None
+    image_url = _static_url(images[0]) if images else None
     cat_name = None
     subcat_name = None
+    cat_img = None
+    subcat_img = None
     if row[5] is not None:
-        c_row = (await db.execute(select(Category.name).filter(Category.category_id == row[5]))).first()
-        cat_name = c_row[0] if c_row else None
+        c_row = (await db.execute(select(Category.name, Category.image_url).filter(Category.category_id == row[5]))).first()
+        if c_row:
+            cat_name = c_row[0]
+            cat_img = c_row[1]
     if row[6] is not None:
-        s_row = (await db.execute(select(Subcategory.name).filter(Subcategory.subcategory_id == row[6]))).first()
-        subcat_name = s_row[0] if s_row else None
+        s_row = (await db.execute(select(Subcategory.name, Subcategory.image_url).filter(Subcategory.subcategory_id == row[6]))).first()
+        if s_row:
+            subcat_name = s_row[0]
+            subcat_img = s_row[1]
+    if not image_url and subcat_img:
+        image_url = _static_url(subcat_img)
+    if not image_url and cat_img:
+        image_url = _static_url(cat_img)
     item = {
         "id": pid,
         "name": row[1] or "Product",
@@ -240,35 +274,29 @@ async def validate_cart(payload: CartValidationRequest, db: AsyncSession = Depen
 
     return CartValidationResponse(items=results)
 
+from sqlalchemy.orm import selectinload
 # --------------------------------------------------
 # Category/Subcategory endpoints for frontend pages
 # --------------------------------------------------
 @public_router.get("/api/categories")
 async def list_categories(db: AsyncSession = Depends(get_db)):
-    rows = (await db.execute(select(Category.category_id, Category.name, Category.image_url))).all()
+    result = await db.execute(
+        select(Category).options(selectinload(Category.subcategories))
+    )
     categories = []
-    for cid, name, img in rows:
-        sub_rows = (await db.execute(select(Subcategory.subcategory_id, Subcategory.name, Subcategory.image_url).filter(Subcategory.category_id == cid))).all()
+    for category in result.scalars().unique():
         subs = [
             {
-                "subcategory_id": s_id,
-                "name": s_name or "",
-                "image_url": (
-                    f"/static/{quote(str(s_img).replace('\\\\', '/').replace('\\', '/'), safe='/')}"
-                    if s_img
-                    else None
-                ),
+                "subcategory_id": sub.subcategory_id,
+                "name": sub.name or "",
+                "image_url": _static_url(sub.image_url),
             }
-            for (s_id, s_name, s_img) in sub_rows
+            for sub in category.subcategories
         ]
         categories.append({
-            "category_id": cid,
-            "name": name or "",
-            "image_url": (
-                f"/static/{quote(str(img).replace('\\\\', '/').replace('\\', '/'), safe='/')}"
-                if img
-                else None
-            ),
+            "category_id": category.category_id,
+            "name": category.name or "",
+            "image_url": _static_url(category.image_url),
             "subcategories": subs,
         })
     return {"categories": categories}
@@ -284,11 +312,7 @@ async def get_category(category_id: int, db: AsyncSession = Depends(get_db)):
         {
             "subcategory_id": s_id,
             "name": s_name or "",
-            "image_url": (
-                f"/static/{quote(str(s_img).replace('\\\\', '/').replace('\\', '/'), safe='/')}"
-                if s_img
-                else None
-            ),
+            "image_url": _static_url(s_img),
         }
         for (s_id, s_name, s_img) in sub_rows
     ]
@@ -296,11 +320,7 @@ async def get_category(category_id: int, db: AsyncSession = Depends(get_db)):
         "category": {
             "category_id": cid,
             "name": name or "",
-            "image_url": (
-                f"/static/{quote(str(img).replace('\\\\', '/').replace('\\', '/'), safe='/')}"
-                if img
-                else None
-            ),
+            "image_url": _static_url(img),
         },
         "subcategories": subs,
     }

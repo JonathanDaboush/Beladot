@@ -270,6 +270,14 @@ def create_app():
             except Exception:
                 # Avoid blocking startup; tests may manage schema separately
                 pass
+        # Bootstrap via unified script (idempotent), dev/test only
+        if settings.ENV in ("dev", "test"):
+            try:
+                from backend.scripts import bootstrap as _bootstrap
+                _bootstrap.run(all=True)
+            except Exception:
+                # Never block app startup on bootstrap
+                pass
         # Optional migration check (silent in tests)
         try:
             from alembic.config import Config
@@ -329,10 +337,12 @@ def create_app():
         # Minimal policy map; extend as needed without breaking routes
         policy = {
             "/api/v1/customer": {"roles": {"user"}},
-            "/api/v1/shipping": {"roles": {"employee", "seller"}},
             "/api/v1/employee": {"roles": {"employee"}},
+            "/api/v1/manager": {"roles": {"manager"}},
             "/api/v1/seller": {"roles": {"seller"}},
+            "/api/v1/shipping": {"roles": {"employee"}},
         }
+        # Public endpoints are deliberately excluded from RBAC (e.g., /api/v1/public)
         for prefix, rule in policy.items():
             if path.startswith(prefix):
                 role = identity.get("role")
@@ -351,12 +361,14 @@ def create_app():
     from backend.api.routes_uploads import router as uploads_router
     from backend.api.routes_manager import router as manager_router
     from backend.api.routes_catalog import catalog_router, public_router
+    from backend.api.routes_user import router as user_router
     from fastapi.staticfiles import StaticFiles
 
     app.include_router(finance_router)
     app.include_router(employee_router)
     app.include_router(seller_router)
     app.include_router(customer_router)
+    app.include_router(user_router)
     app.include_router(assistance_router)
     app.include_router(shipping_router)
     app.include_router(uploads_router)

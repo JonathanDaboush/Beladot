@@ -29,7 +29,7 @@ def setup_test_database():
     from alembic import command
 
     # Use a synchronous SQLite URL for Alembic
-    os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+        os.environ["DATABASE_URL"] = "postgresql+asyncpg://postgres:postgres@localhost:5432/divina_dev"
 
     alembic_cfg = Config(
         os.path.join(os.path.dirname(__file__), "../../alembic.ini")

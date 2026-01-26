@@ -8,7 +8,7 @@ import os
 # --------------------------------------------------
 # Ensure backend is importable
 # --------------------------------------------------
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../backend')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import your declarative Base
 from backend.db.base import Base  # canonical declarative Base

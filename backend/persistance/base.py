@@ -29,10 +29,7 @@ def get_engine():
 		_sync_url = _configured_url.replace("+asyncpg", "+psycopg2")
 	else:
 		_sync_url = _configured_url
-	return create_engine(
-		_sync_url,
-		connect_args={"check_same_thread": False} if _sync_url.startswith("sqlite") else {},
-	)
+	return create_engine(_sync_url)
 
 def get_sessionmaker():
 	"""

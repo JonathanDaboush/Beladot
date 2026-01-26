@@ -29,7 +29,7 @@ class SellerPayout(Base):
     """
     __tablename__ = 'seller_payout'
     payout_id = Column(BigInteger, primary_key=True)
-    seller_id = Column(BigInteger, ForeignKey('user.user_id'))
+    seller_id = Column(BigInteger, ForeignKey('users.user_id'))
     amount = Column(Numeric(10,2))
     currency = Column(String(10))
     date_of_payment = Column(Date)

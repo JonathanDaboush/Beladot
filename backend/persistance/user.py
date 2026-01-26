@@ -11,7 +11,7 @@ from .base import Base
 from .enums import SellerStatusEnum
 
 class User(Base):
-    __tablename__ = 'user'
+    __tablename__ = 'users'
     user_id = Column(Integer, primary_key=True, autoincrement=True)
     full_name = Column(String(255), nullable=False)
     dob = Column(Date)
@@ -22,3 +22,8 @@ class User(Base):
     img_location = Column(String(255))
     account_status = Column(String(5), nullable=False, default='True')
     # Relationships (to be completed in other models)
+    wishlist_items = relationship(
+        "WishlistItem",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )

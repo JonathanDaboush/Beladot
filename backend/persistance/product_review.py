@@ -28,7 +28,7 @@ class ProductReview(Base):
     __tablename__ = 'product_review'
     review_id = Column(BigInteger, primary_key=True)
     product_id = Column(BigInteger, ForeignKey('product.product_id'))
-    user_id = Column(BigInteger, ForeignKey('user.user_id'))
+    user_id = Column(BigInteger, ForeignKey('users.user_id'))
     rating_id = Column(BigInteger, ForeignKey('product_rating.rating_id'))
     review_text = Column(Text)
     created_at = Column(DateTime)

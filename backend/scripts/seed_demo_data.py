@@ -1,11 +1,13 @@
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from datetime import date, datetime, UTC
 import secrets
 import string
 
 from sqlalchemy import select, func
 
-from backend.db.init_schema import ensure_sqlite_schema
+## Removed ensure_sqlite_schema import; not needed for Postgres
 from backend.persistance.base import get_sessionmaker
 from backend.persistance.user import User
 from backend.persistance.department import Department
@@ -16,12 +18,12 @@ from backend.persistance.finance_employee import FinanceEmployee
 
 ROLES_TO_CREATE = {
     # human users (not employees)
-    "user": 3,
-    "seller": 3,
+    "user": 5,
+    "seller": 5,
     # employees by department
-    "customer_service": 3,
-    "shipping": 3,
-    "finance": 3,
+    "customer_service": 5,
+    "shipping": 5,
+    "finance": 5,
 }
 
 DEPARTMENTS = [
@@ -61,9 +63,7 @@ def gen_password(prefix: str, unique: int | str) -> str:
 def create_user(session, full_name: str, email: str, password: str) -> User:
     existing = session.execute(select(User).where(User.email == email)).scalar_one_or_none()
     if existing:
-        # Ensure password uniqueness by updating existing accounts as well
-        existing.password = password
-        session.flush()
+        # Idempotent: do not modify existing user credentials
         return existing
     u = User(
         full_name=full_name,
@@ -81,6 +81,11 @@ def create_user(session, full_name: str, email: str, password: str) -> User:
 
 
 def create_employee(session, user_id: int, department_id: int) -> Employee:
+    existing = session.execute(
+        select(Employee).where(Employee.user_id == user_id, Employee.department_id == department_id)
+    ).scalars().first()
+    if existing:
+        return existing
     emp_id = _next_pk(session, Employee, Employee.emp_id)
     e = Employee(emp_id=emp_id, user_id=user_id, department_id=department_id, notes=None)
     session.add(e)
@@ -89,6 +94,11 @@ def create_employee(session, user_id: int, department_id: int) -> Employee:
 
 
 def create_manager(session, user_id: int, department_id: int) -> Manager:
+    existing = session.execute(
+        select(Manager).where(Manager.user_id == user_id, Manager.department_id == department_id)
+    ).scalars().first()
+    if existing:
+        return existing
     manager_id = _next_pk(session, Manager, Manager.manager_id)
     now = datetime.now(UTC)
     m = Manager(
@@ -105,6 +115,11 @@ def create_manager(session, user_id: int, department_id: int) -> Manager:
 
 
 def create_finance_employee(session, emp: Employee) -> FinanceEmployee:
+    existing = session.execute(
+        select(FinanceEmployee).where(FinanceEmployee.emp_id == emp.emp_id)
+    ).scalars().first()
+    if existing:
+        return existing
     fe_id = _next_pk(session, FinanceEmployee, FinanceEmployee.finance_emp_id)
     now = datetime.now(UTC)
     fe = FinanceEmployee(
@@ -120,8 +135,7 @@ def create_finance_employee(session, emp: Employee) -> FinanceEmployee:
 
 
 def main():
-    # Ensure SQLite schema exists in dev/test
-    ensure_sqlite_schema()
+    # No schema creation needed for Postgres
     Session = get_sessionmaker()
 
     credentials = []

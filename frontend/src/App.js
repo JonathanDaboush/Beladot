@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import EmployeeServicesLayout from './pages/employee/EmployeeServicesLayout';
-import ProductCatalogPage from './pages/ProductCatalogPage';
+import BrowsePage from './pages/BrowsePage';
 import CategoryPage from './pages/CategoryPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import ProfilePage from './pages/ProfilePage';
@@ -40,6 +40,8 @@ import UiShowcasePage from './pages/UiShowcasePage';
 import ManagerTeamPage from './pages/manager/ManagerTeamPage';
 import ManagerApprovalsPage from './pages/manager/ManagerApprovalsPage';
 import ManagerDepartmentOverviewPage from './pages/manager/ManagerDepartmentOverviewPage';
+import AssistancePage from './pages/AssistancePage';
+import CartPage from './pages/CartPage';
 
 
 function HomePage() {
@@ -62,14 +64,18 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/catalog" element={<ProductCatalogPage />} />
+          <Route path="/catalog" element={<BrowsePage />} />
           <Route path="/ui" element={<UiShowcasePage />} />
           <Route path="/category/:id" element={<CategoryPage />} />
+          {/* Subcategory route reuses BrowsePage with forced filter via param */}
+          <Route path="/subcategory/:id" element={<BrowsePageWrapper />} />
           <Route path="/product/:id" element={<ProductDetailPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/assistance" element={<AssistancePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/cart" element={<CartPage />} />
           {/* Employee Services routes */}
           <Route path="/employee" element={<EmployeeServicesLayout />}>
             <Route index element={<EmployeeHomePage />} />
@@ -113,3 +119,9 @@ function App() {
 }
 
 export default App;
+
+// Small wrapper to pass subcategory from route params into BrowsePage as a prop
+function BrowsePageWrapper() {
+  const { id } = require('react-router-dom').useParams();
+  return <BrowsePage forceSubcategoryId={id} />;
+}

@@ -27,7 +27,7 @@ class ProductRating(Base):
     __tablename__ = 'product_rating'
     rating_id = Column(BigInteger, primary_key=True)
     product_id = Column(BigInteger, ForeignKey('product.product_id'))
-    user_id = Column(BigInteger, ForeignKey('user.user_id'))
+    user_id = Column(BigInteger, ForeignKey('users.user_id'))
     rating = Column(Integer)
     created_at = Column(DateTime)
     # Relationships (to be completed in related models)

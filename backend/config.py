@@ -30,7 +30,7 @@ class DevelopmentSettings(BaseAppSettings):
     # Provide safe, permissive defaults for local development
     SECRET_KEY: str = 'dev-secret-key'
     EMAIL_API_KEY: str = 'dev-email-api-key'
-    DATABASE_URL: str = 'sqlite:///./dev.db'
+    DATABASE_URL: str = 'postgresql+psycopg2://postgres:password@localhost:5432/divina_dev'
     # In dev, do not load general .env and use a DEV_ prefix to avoid accidental overrides
     model_config = SettingsConfigDict(
         env_file=None,
@@ -45,7 +45,7 @@ class TestSettings(BaseAppSettings):
     # Provide safe defaults for tests to allow import/run without external env
     SECRET_KEY: str = 'test-secret-key'
     EMAIL_API_KEY: str = 'test-email-api-key'
-    DATABASE_URL: str = 'sqlite:///./test.db'
+    DATABASE_URL: str = 'postgresql+psycopg2://postgres:password@localhost:5432/divina_dev'
     # For tests, ignore extra env vars and avoid loading .env
     model_config = SettingsConfigDict(
         env_file=None,

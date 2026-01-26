@@ -6,7 +6,8 @@ import { ErrorBoundary } from '../ErrorBoundary.jsx';
 import { renderWithRouter } from '../../test-utils/renderWithRouter';
 
 jest.mock('../../context/AuthContext', () => ({
-  useAuth: () => ({ activeRole: 'user', availableRoles: ['user'] }),
+  // Provide multiple roles so the role indicator & switcher are visible
+  useAuth: () => ({ activeRole: 'user', availableRoles: ['user', 'seller'] }),
 }));
 
 jest.mock('../../hooks/usePortalType', () => ({

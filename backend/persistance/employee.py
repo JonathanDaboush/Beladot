@@ -25,7 +25,7 @@ class Employee(Base):
     """
     __tablename__ = 'employee'
     emp_id = Column(BigInteger, primary_key=True)
-    user_id = Column(BigInteger, ForeignKey('user.user_id'))
+    user_id = Column(BigInteger, ForeignKey('users.user_id'))
     department_id = Column(BigInteger, ForeignKey('department.department_id'))
     notes = Column(String(255), nullable=True)  # Temporary field for update testing
     # Relationships (to be completed in employee_pto.py, employee_sickday.py, shift.py, shift_request.py, finance_employee.py, employee_payment.py)

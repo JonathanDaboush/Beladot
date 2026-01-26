@@ -1,67 +1,51 @@
-# Async SQLAlchemy setup for FastAPI/Quart
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+# Asyncpg setup for FastAPI
 
-_engine = None
-_session_factory = None
+_pool = None
 
-def get_async_engine():
-    """
-    Create and return an async SQLAlchemy Engine from the DATABASE_URL.
-    Defers environment access until runtime to avoid import-time failures.
-    """
-    global _engine
-    if _engine is None:
-        # Load URL from application settings (dev/test provide safe defaults)
-        from backend.config import settings
-        url = settings.DATABASE_URL
-        # Force SQLite in dev/test if URL points to Postgres to avoid local auth issues
-        if settings.ENV in ("dev", "test") and url.startswith("postgres"):
-            url = "sqlite+aiosqlite:///./dev.db" if settings.ENV == "dev" else "sqlite+aiosqlite:///./test.db"
-        # Ensure async driver for SQLite in test environments
-        if url.startswith("sqlite") and "+aiosqlite" not in url:
-            url = url.replace("sqlite://", "sqlite+aiosqlite://")
-        _engine = create_async_engine(url, echo=True, future=True)
-    return _engine
+async def get_asyncpg_pool():
+    global _pool
+    if _pool is None:
+        _pool = await asyncpg.create_pool(dsn=settings.DATABASE_URL.replace('postgresql+asyncpg', 'postgresql'))
+    return _pool
 
-def get_async_sessionmaker():
-    """
-    Return an async sessionmaker bound to the runtime-created async Engine.
-    """
-    global _session_factory
-    if _session_factory is None:
-        # Defer engine creation; avoid generic type evaluation at import time
-        _session_factory = async_sessionmaker(get_async_engine(), expire_on_commit=False)
-    return _session_factory
+async def get_db_connection():
+    pool = await get_asyncpg_pool()
+    async with pool.acquire() as connection:
+        yield connection
 
-__all__ = [
-    "AsyncSessionLocal",
-    "engine",
-    "get_async_engine",
-    "get_async_sessionmaker",
-]
+# Async SQLAlchemy session setup for FastAPI
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from backend.config import settings
 
-class _LazyAsyncSessionLocal:
-    """Callable proxy that creates the async session factory on first use and reuses it thereafter."""
-    def __call__(self, *args, **kwargs):
-        return get_async_sessionmaker()(*args, **kwargs)
+# Convert sync DB URL to async if needed
+db_url = settings.DATABASE_URL
+if db_url.startswith("postgresql+psycopg2"):
+    db_url = db_url.replace("postgresql+psycopg2", "postgresql+asyncpg")
 
-# Public symbol expected by app/tests; lazily initialized, single factory
-AsyncSessionLocal = _LazyAsyncSessionLocal()
+async_engine = create_async_engine(db_url, echo=False, future=True)
+AsyncSessionLocal = sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False,
+    autocommit=False
+)
 
-class _LazyEngineProxy:
-    """Attribute proxy for the async Engine to preserve lazy initialization.
+# Optionally, keep the asyncpg pool for direct connections if needed elsewhere
+import asyncpg
+_pool = None
+async def get_asyncpg_pool():
+    global _pool
+    if _pool is None:
+        _pool = await asyncpg.create_pool(dsn=db_url.replace('postgresql+asyncpg', 'postgresql'))
+    return _pool
 
-    Allows code importing `engine` to access attributes/methods like
-    `engine.begin()`, `engine.dispose()`, etc., while deferring actual
-    engine creation until first attribute access.
-    """
-    def __getattr__(self, name):
-        return getattr(get_async_engine(), name)
-
-# Public symbol expected by tests (`engine`);
-# provides lazy access to the actual async Engine instance
-engine = _LazyEngineProxy()
+async def get_db_connection():
+    pool = await get_asyncpg_pool()
+    async with pool.acquire() as connection:
+        yield connection
 
 
 

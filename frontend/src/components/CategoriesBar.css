@@ -1,0 +1,11 @@
+.categories-bar{background:#fff;border-top:1px solid var(--dp-border);border-bottom:1px solid var(--dp-border)}
+.categories-bar .cat-row{display:flex;gap:.75rem;padding:.5rem 1rem;margin:0;list-style:none}
+.categories-bar .cat-item{position:relative}
+.categories-bar .cat-btn{background:transparent;border:0;padding:.4rem .6rem;border-radius:8px;cursor:pointer;font-weight:600}
+.categories-bar .cat-item.open .cat-btn,.categories-bar .cat-btn:hover{background:#f5f7fb}
+.categories-bar .cat-dropdown{position:absolute;left:0;top:100%;background:#fff;border:1px solid var(--dp-border);border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.12);padding:.5rem;margin-top:6px;min-width:220px;z-index:20}
+.categories-bar .cat-item:not(.open) .cat-dropdown{display:none}
+.categories-bar .cat-dropdown ul{list-style:none;margin:0;padding:0;max-height:320px;overflow:auto}
+.categories-bar .cat-dropdown li{margin:0}
+.categories-bar .sub-btn{display:block;width:100%;text-align:left;background:transparent;border:0;padding:.5rem .6rem;border-radius:8px;cursor:pointer}
+.categories-bar .sub-btn:hover{background:#f5f7fb}

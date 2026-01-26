@@ -8,9 +8,9 @@ const ROLE_NAV = {
     { to: '/orders', label: 'Orders' },
     { to: '/wishlist', label: 'Wishlist' },
     { to: '/assistance', label: 'Assistance' },
-    { to: '/profile', label: 'Profile' },
   ],
   seller: [
+    { to: '/catalog', label: 'Browse' },
     { to: '/seller/products', label: 'Products' },
     { to: '/seller/orders', label: 'Orders' },
     { to: '/seller/analytics', label: 'Analytics' },
